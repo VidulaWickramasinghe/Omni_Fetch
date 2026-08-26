@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">OmniFetch Docker Compose operating envelope</title>
+  <desc id="desc">Two analytical charts show a ten-job admission capacity with two running and eight queued jobs, and time limits of thirty minutes per job, one hundred twenty minutes per media item, and three hundred sixty minutes of result retention. Resource labels show two CPU cores, 1536 MiB memory, 128 PIDs, and a 1024 MiB media-byte ceiling.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0b1017"/>
+      <stop offset="1" stop-color="#111a25"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#263544" stroke-opacity=".35"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="640" rx="26" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1280" height="640" rx="26" fill="url(#grid)" opacity=".28"/>
+  <g font-family="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+    <text x="64" y="66" fill="#f4f7f8" font-size="30" font-weight="750">Default operating envelope</text>
+    <text x="64" y="97" fill="#a7b3be" font-size="16">Docker Compose profile · values are configurable in .env</text>
+
+    <text x="64" y="149" fill="#ff9557" font-size="12" font-weight="700" letter-spacing="1.3">JOB ADMISSION CAPACITY</text>
+    <text x="64" y="181" fill="#f4f7f8" font-size="20" font-weight="700">10 active or queued jobs</text>
+    <text x="64" y="205" fill="#a7b3be" font-size="14">Admission is atomic: the running and queued ceilings are enforced together.</text>
+
+    <g transform="translate(64 231)">
+      <rect width="1120" height="54" rx="12" fill="#172330"/>
+      <path d="M12 0h212v54H12A12 12 0 0 1 0 42V12A12 12 0 0 1 12 0Z" fill="#ff9557"/>
+      <path d="M224 0h884a12 12 0 0 1 12 12v30a12 12 0 0 1-12 12H224Z" fill="#7be0ca" fill-opacity=".72"/>
+      <text x="112" y="34" text-anchor="middle" fill="#211208" font-size="15" font-weight="750">2 running</text>
+      <text x="672" y="34" text-anchor="middle" fill="#0b1017" font-size="15" font-weight="750">8 queued</text>
+    </g>
+    <g fill="#a7b3be" font-size="12">
+      <text x="64" y="307">0</text>
+      <text x="288" y="307" text-anchor="middle">2</text>
+      <text x="1184" y="307" text-anchor="end">10 jobs</text>
+    </g>
+
+    <text x="64" y="363" fill="#ff9557" font-size="12" font-weight="700" letter-spacing="1.3">TIME POLICY</text>
+    <text x="64" y="395" fill="#f4f7f8" font-size="20" font-weight="700">Minutes from admission or completion</text>
+
+    <g transform="translate(228 422)">
+      <g stroke="#385063" stroke-width="1">
+        <path d="M0 0V132M160 0V132M320 0V132M480 0V132M640 0V132M800 0V132M960 0V132"/>
+      </g>
+      <g fill="#a7b3be" font-size="12" text-anchor="middle">
+        <text x="0" y="154">0</text>
+        <text x="160" y="154">60</text>
+        <text x="320" y="154">120</text>
+        <text x="480" y="154">180</text>
+        <text x="640" y="154">240</text>
+        <text x="800" y="154">300</text>
+        <text x="960" y="154">360 min</text>
+      </g>
+      <g>
+        <rect y="4" width="80" height="26" rx="6" fill="#ff9557"/>
+        <text x="90" y="22" fill="#f4f7f8" font-size="13" font-weight="700">30 min job deadline</text>
+        <rect y="50" width="320" height="26" rx="6" fill="#7be0ca"/>
+        <text x="330" y="68" fill="#f4f7f8" font-size="13" font-weight="700">120 min media-duration ceiling</text>
+        <rect y="96" width="960" height="26" rx="6" fill="#8ad9ff" fill-opacity=".72"/>
+        <text x="950" y="114" text-anchor="end" fill="#0b1017" font-size="13" font-weight="750">360 min result retention</text>
+      </g>
+    </g>
+    <g transform="translate(64 426)" fill="#c3cbd2" font-size="13" font-weight="650">
+      <text y="18">Job timeout</text>
+      <text y="64">Accepted media</text>
+      <text y="110">Result TTL</text>
+    </g>
+
+    <path d="M64 594H1216" stroke="#263544"/>
+    <g transform="translate(64 615)" font-size="13">
+      <text fill="#a7b3be">Container guardrails</text>
+      <text x="174" fill="#f4f7f8" font-weight="700">2 CPU</text>
+      <text x="267" fill="#385063">•</text>
+      <text x="291" fill="#f4f7f8" font-weight="700">1536 MiB RAM</text>
+      <text x="422" fill="#385063">•</text>
+      <text x="446" fill="#f4f7f8" font-weight="700">128 PIDs</text>
+      <text x="535" fill="#385063">•</text>
+      <text x="559" fill="#f4f7f8" font-weight="700">1024 MiB media-byte ceiling</text>
+    </g>
+  </g>
+</svg>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import queue
 import shutil
@@ -20,6 +21,21 @@ from typing import IO
 from ..config import Settings
 from ..models import ACTIVE_STATUSES, TERMINAL_STATUSES, DownloadRequest, JobRecord, JobStatus
 from .jobs import JobStore, JobTransitionError
+
+logger = logging.getLogger(__name__)
+
+
+def _worker_environment() -> dict[str, str]:
+    """Preserve parent imports when the isolated worker changes directory."""
+
+    environment = os.environ.copy()
+    import_paths: list[str] = []
+    for entry in sys.path:
+        resolved = str((Path.cwd() if not entry else Path(entry)).resolve(strict=False))
+        if resolved not in import_paths:
+            import_paths.append(resolved)
+    environment["PYTHONPATH"] = os.pathsep.join(import_paths)
+    return environment
 
 
 class QueueFullError(RuntimeError):
@@ -190,6 +206,12 @@ class DownloadManager:
                 )
                 self._remove_workspace(job_id)
             elif current.status not in TERMINAL_STATUSES:
+                if stderr_tail:
+                    logger.error(
+                        "Downloader worker exited with code %s: %s",
+                        process.returncode,
+                        " | ".join(stderr_tail),
+                    )
                 self.store.patch(
                     job_id,
                     expected_status=ACTIVE_STATUSES,
@@ -236,6 +258,7 @@ class DownloadManager:
                 errors="replace",
                 bufsize=1,
                 start_new_session=True,
+                env=_worker_environment(),
             )
             with self._lock:
                 self._processes[job_id] = process

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="title desc">
+  <title id="title">OmniFetch — universal media downloader</title>
+  <desc id="desc">A dark product banner showing the OmniFetch mark and the workflow inspect, choose, download.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1017"/>
+      <stop offset="0.58" stop-color="#111a25"/>
+      <stop offset="1" stop-color="#0d151d"/>
+    </linearGradient>
+    <radialGradient id="coralGlow" cx="0" cy="0" r="1" gradientTransform="translate(1120 35) rotate(140) scale(430 260)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff9557" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#ff9557" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mintGlow" cx="0" cy="0" r="1" gradientTransform="translate(170 350) rotate(-45) scale(420 250)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7be0ca" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#7be0ca" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity=".28"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="360" rx="28" fill="url(#background)"/>
+  <rect width="1280" height="360" rx="28" fill="url(#coralGlow)"/>
+  <rect width="1280" height="360" rx="28" fill="url(#mintGlow)"/>
+  <path d="M0 296C176 244 302 333 478 290S801 230 985 278s207 27 295-15v97H0Z" fill="#7be0ca" opacity=".035"/>
+  <g opacity=".16" stroke="#385063">
+    <path d="M42 68H1238M42 122H1238M42 176H1238M42 230H1238M42 284H1238"/>
+    <path d="M136 34V326M280 34V326M424 34V326M568 34V326M712 34V326M856 34V326M1000 34V326M1144 34V326"/>
+  </g>
+
+  <g transform="translate(86 77)" filter="url(#shadow)">
+    <rect width="108" height="108" rx="28" fill="#172330" stroke="#385063" stroke-width="2"/>
+    <g transform="translate(24 24)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
+      <path d="M18.3 9.6A23 23 0 1 1 13 39.2" stroke="#ff9557"/>
+      <path d="m7.5 28 5.4 11.5 11.7-5" stroke="#7be0ca"/>
+      <path d="M36 11v32m0 0L25.5 32.5M36 43l10.5-10.5" stroke="#ff9557"/>
+    </g>
+  </g>
+
+  <g font-family="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+    <text x="226" y="128" fill="#f4f7f8" font-size="58" font-weight="750" letter-spacing="-2">OmniFetch<tspan fill="#ff9557">.</tspan></text>
+    <text x="228" y="170" fill="#c3cbd2" font-size="22" font-weight="500">Universal media extraction, without unnecessary re-encoding.</text>
+    <text x="228" y="205" fill="#a7b3be" font-size="16">Inspect the real source streams · choose a quality policy · save locally</text>
+  </g>
+
+  <g transform="translate(228 246)" font-family="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="14" font-weight="650">
+    <g>
+      <circle cx="14" cy="14" r="14" fill="#ff9557"/>
+      <text x="14" y="19" text-anchor="middle" fill="#211208">1</text>
+      <text x="39" y="19" fill="#f4f7f8">INSPECT</text>
+    </g>
+    <path d="M126 14h66" stroke="#385063" stroke-width="2"/>
+    <path d="m186 9 7 5-7 5" fill="none" stroke="#385063" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(214)">
+      <circle cx="14" cy="14" r="14" fill="#ff9557"/>
+      <text x="14" y="19" text-anchor="middle" fill="#211208">2</text>
+      <text x="39" y="19" fill="#f4f7f8">CHOOSE</text>
+    </g>
+    <path d="M346 14h66" stroke="#385063" stroke-width="2"/>
+    <path d="m406 9 7 5-7 5" fill="none" stroke="#385063" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(434)">
+      <circle cx="14" cy="14" r="14" fill="#7be0ca"/>
+      <text x="14" y="19" text-anchor="middle" fill="#0b1017">3</text>
+      <text x="39" y="19" fill="#f4f7f8">DOWNLOAD</text>
+    </g>
+  </g>
+
+  <g transform="translate(1010 218)" font-family="SFMono-Regular, Consolas, Liberation Mono, monospace">
+    <rect width="178" height="64" rx="14" fill="#101822" stroke="#263544"/>
+    <circle cx="23" cy="22" r="5" fill="#7be0ca"/>
+    <text x="38" y="27" fill="#c3cbd2" font-size="12" font-weight="700">SELF-HOSTED</text>
+    <text x="20" y="48" fill="#a7b3be" font-size="11">FastAPI · yt-dlp · FFmpeg</text>
+  </g>
+</svg>

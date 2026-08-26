@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 
 import pytest
 
 from app.models import TERMINAL_STATUSES, DownloadRequest, FormatMode, JobRecord, JobStatus
+from app.services import manager as manager_module
 from app.services.jobs import JobStore
-from app.services.manager import DownloadManager
+from app.services.manager import DownloadManager, _worker_environment
 
 
 def make_job(index: int = 0, *, status: JobStatus = JobStatus.QUEUED) -> JobRecord:
@@ -187,6 +189,26 @@ def test_invalid_or_oversized_worker_events_are_ignored(manager_harness) -> None
     manager._handle_event_line(job.job_id, json.dumps(["not", "an", "object"]))
 
     assert store.get(job.job_id).status == JobStatus.INSPECTING
+
+
+def test_worker_environment_makes_parent_import_paths_absolute(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    vendor = tmp_path / "_vendor"
+    site_packages = tmp_path / "site-packages"
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        manager_module.sys,
+        "path",
+        ["", "_vendor", str(site_packages), "_vendor"],
+    )
+    monkeypatch.setenv("PYTHONPATH", "_vendor")
+
+    environment = _worker_environment()
+    import_paths = environment["PYTHONPATH"].split(os.pathsep)
+
+    assert import_paths == [str(tmp_path.resolve()), str(vendor.resolve()), str(site_packages)]
+    assert all(Path(path).is_absolute() for path in import_paths)
 
 
 @pytest.mark.integration

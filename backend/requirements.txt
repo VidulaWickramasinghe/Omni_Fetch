@@ -1,0 +1,10 @@
+# Runtime dependencies are kept within versions tested together. yt-dlp uses a
+# calendar version and should be updated deliberately and tested frequently.
+fastapi>=0.141.1,<0.142
+pydantic>=2.13.4,<3
+uvicorn[standard]>=0.52.0,<0.53
+yt-dlp[default]>=2026.8.19,<2026.9
+
+# Provides a platform wheel containing FFmpeg for source installs. The Docker
+# image still installs the distribution FFmpeg/FFprobe packages.
+imageio-ffmpeg>=0.6.0,<0.7

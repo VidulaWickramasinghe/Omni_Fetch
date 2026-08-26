@@ -62,7 +62,13 @@ startup; zero, negative, malformed, or unsafe values fail closed.
 | `OMNIFETCH_COOKIE_FILE` | `/run/secrets/omnifetch-cookies.txt` | In-container cookie source; set directly for non-Compose runs. |
 | `OMNIFETCH_ALLOWED_PORTS` | `80,443` | Explicit URL destination ports. |
 | `OMNIFETCH_ALLOWED_ORIGINS` | loopback origin list | Origins allowed by CORS for source development. |
-| `OMNIFETCH_FFMPEG_LOCATION` | empty | Optional FFmpeg executable/directory; empty uses `PATH`. |
+| `OMNIFETCH_FFMPEG_LOCATION` | empty | Optional FFmpeg executable/directory; empty prefers `PATH`, then the bundled wheel binary. |
+
+Current YouTube extraction also needs yt-dlp's external challenge scripts and
+a supported JavaScript runtime. The Docker image includes Deno; source installs
+include the scripts and use Deno, Node.js, or QuickJS from `PATH` in that order.
+The runtime dependency set also includes `curl-cffi`, which supplies browser
+impersonation for sources such as TikTok that use TLS fingerprinting.
 
 With `OMNIFETCH_PUBLIC_MODE=true` and Generic extraction disabled, unknown
 platform URLs fail before extraction. Public mode does not add OmniFetch user

@@ -13,6 +13,12 @@
 </head>
 <body data-app-state="idle">
   <a class="skip-link" href="#main-content">Skip to downloader</a>
+  <div class="ambient-canvas" aria-hidden="true">
+    <span class="ambient-orb ambient-orb--coral"></span>
+    <span class="ambient-orb ambient-orb--blue"></span>
+    <span class="ambient-orb ambient-orb--mint"></span>
+    <span class="ambient-grid"></span>
+  </div>
 
   <header class="site-header">
     <a class="brand" href="/" aria-label="OmniFetch home">
@@ -21,21 +27,35 @@
         <path d="m7.6 20.2 2.7 5.9 6-2.5" />
         <path d="M20 12v16m0 0-5.2-5.2M20 28l5.2-5.2" />
       </svg>
-      <span>OmniFetch</span>
+      <span class="brand__copy"><strong>OmniFetch<span>.</span></strong><small>Universal media engine</small></span>
     </a>
-    <span class="header-pill"><span aria-hidden="true"></span>Self-hosted &amp; local</span>
+    <div class="header-actions">
+      <a class="header-link" href="/docs">API</a>
+      <span class="header-pill"><span aria-hidden="true"></span>Self-hosted &amp; local</span>
+    </div>
   </header>
 
   <main id="main-content" class="app-shell">
     <section class="hero" aria-labelledby="hero-title">
-      <p class="eyebrow">Universal media extractor</p>
-      <h1 id="hero-title">Save it as clearly as it was shared.</h1>
-      <p class="hero__copy">Paste a media URL, see the qualities the source actually offers, and download without unnecessary re-encoding. A server-configured login session can be used for media you are authorized to access.</p>
-      <ul class="trust-list" aria-label="OmniFetch principles">
-        <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10.5 3.5 3.5L16 5.5" /></svg>Source quality</li>
-        <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10.5 3.5 3.5L16 5.5" /></svg>No artificial upscaling</li>
-        <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10.5 3.5 3.5L16 5.5" /></svg>Private by design</li>
-      </ul>
+      <div class="hero__content">
+        <p class="eyebrow"><span aria-hidden="true"></span>Universal media extractor</p>
+        <h1 id="hero-title">Save it as clearly as it was shared.</h1>
+        <p class="hero__copy">Paste a media URL, inspect the real streams offered by its source, and save the quality you choose without unnecessary re-encoding.</p>
+        <ul class="trust-list" aria-label="OmniFetch principles">
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10.5 3.5 3.5L16 5.5" /></svg>Source quality</li>
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10.5 3.5 3.5L16 5.5" /></svg>No artificial upscaling</li>
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10.5 3.5 3.5L16 5.5" /></svg>Private by design</li>
+        </ul>
+      </div>
+      <aside class="pipeline-card" aria-label="OmniFetch media pipeline">
+        <div class="pipeline-card__heading"><span>Media pipeline</span><small>Local workflow</small></div>
+        <ol>
+          <li><span>01</span><div><strong>Inspect source</strong><small>Read the available media streams</small></div><i aria-hidden="true"></i></li>
+          <li><span>02</span><div><strong>Choose quality</strong><small>Keep the source resolution you want</small></div><i aria-hidden="true"></i></li>
+          <li><span>03</span><div><strong>Mux &amp; save</strong><small>Combine compatible streams locally</small></div><i aria-hidden="true"></i></li>
+        </ol>
+        <p><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 9V7a4 4 0 0 1 8 0v2M5 9h10v8H5z" /></svg> Isolated jobs · no artificial enhancement</p>
+      </aside>
     </section>
 
     <noscript>
@@ -46,9 +66,10 @@
     </noscript>
 
     <section class="source-card" aria-labelledby="source-heading">
+      <span class="card-shine" aria-hidden="true"></span>
       <div class="section-heading">
         <div>
-          <p class="step-label">Step 1</p>
+          <p class="step-label">Step 1 · Secure inspector</p>
           <h2 id="source-heading">Find the media</h2>
         </div>
         <span class="secure-note">
@@ -80,7 +101,7 @@
           </label>
           <p>Cookies stay on this server. OmniFetch creates a private temporary copy for this operation and removes it afterward.</p>
         </div>
-        <p id="url-help" class="field-help">Works with supported public URLs and, when enabled above, content the configured account may access. Site availability can change.</p>
+        <p id="url-help" class="field-help"><span aria-hidden="true">✦</span> Works with supported public URLs and, when enabled above, content the configured account may access. Site availability can change.</p>
         <div id="url-error" class="inline-error" role="alert" tabindex="-1" hidden><strong></strong><span></span></div>
       </form>
     </section>

@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import imageio_ffmpeg
-from yt_dlp.dependencies import yt_dlp_ejs
+from yt_dlp.dependencies import curl_cffi, yt_dlp_ejs
 
 from app.config import Settings
 
@@ -61,6 +61,12 @@ def ejs_available() -> bool:
     """Whether the matching yt-dlp external challenge scripts are installed."""
 
     return yt_dlp_ejs is not None
+
+
+def impersonation_available() -> bool:
+    """Whether yt-dlp can impersonate a browser for TLS-sensitive sources."""
+
+    return curl_cffi is not None
 
 
 def ytdlp_runtime_options(settings: Settings) -> dict[str, object]:

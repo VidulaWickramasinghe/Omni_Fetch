@@ -41,6 +41,7 @@ def test_mp4_selector_prefers_h264_and_aac() -> None:
         ("ERROR: Requested format is not available", "selected source format"),
         ("ERROR: HTTP Error 403: Forbidden", "HTTP 403"),
         ("ERROR: Private video. Sign in", "authorized login session"),
+        ("ERROR: Unable to extract universal data for rehydration", "browser verification"),
     ],
 )
 def test_download_errors_are_classified_without_exposing_source_urls(
@@ -332,6 +333,42 @@ def test_transient_media_url_failure_gets_one_fresh_bounded_retry(
     assert TransientDownloadYDL.download_attempts == 2
     assert len(TransientDownloadYDL.instances) == 3
     assert not (settings.job_workspace("9" * 32) / "media.part").exists()
+
+
+class TransientInspectionYDL(SuccessfulYDL):
+    inspect_attempts: ClassVar[int] = 0
+
+    def extract_info(self, url: str, *, download: bool) -> dict[str, Any]:
+        if not download:
+            self.__class__.inspect_attempts += 1
+            if self.__class__.inspect_attempts < 3:
+                raise downloader.yt_dlp.utils.DownloadError(
+                    "Unable to extract universal data for rehydration"
+                )
+        return super().extract_info(url, download=download)
+
+
+def test_transient_source_verification_gets_bounded_preflight_retries(
+    monkeypatch, settings_factory
+) -> None:
+    settings = settings_factory()
+    settings.prepare_runtime_dirs()
+    TransientInspectionYDL.instances = []
+    TransientInspectionYDL.inspect_attempts = 0
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", TransientInspectionYDL)
+    monkeypatch.setattr(downloader, "validate_url", lambda url, _settings: url)
+    monkeypatch.setattr(downloader.time, "sleep", lambda _seconds: None)
+
+    downloader.run_download_task(
+        job_id="8" * 32,
+        url="https://www.tiktok.com/owned-post",
+        mode=FormatMode.ORIGINAL,
+        max_height=None,
+        settings=settings,
+        emit=lambda _event: None,
+    )
+
+    assert TransientInspectionYDL.inspect_attempts == 3
 
 
 def test_authenticated_download_uses_temporary_cookie_copy_and_allows_private_media(

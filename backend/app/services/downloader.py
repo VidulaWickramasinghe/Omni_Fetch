@@ -30,7 +30,12 @@ EventEmitter = Callable[[dict[str, object]], None]
 _RESTRICTED_AVAILABILITY = frozenset({"private", "premium_only", "subscriber_only", "needs_auth"})
 _TRANSIENT_DOWNLOAD_MARKERS = (
     "http error 404",
+    "http error 403",
+    "http error 429",
     "unable to download video data",
+    "universal data for rehydration",
+    "unable to solve js challenge",
+    "unexpected response from webpage request",
     "timed out",
     "incomplete read",
     "connection reset",
@@ -74,10 +79,12 @@ def safe_download_error(error: yt_dlp.utils.DownloadError, settings: Settings) -
     """Classify a yt-dlp failure without exposing source URLs or credentials."""
 
     message = str(error).lower()
-    if "ffmpeg" in message or resolve_ffmpeg_location(settings) is None:
+    if "ffmpeg" in message:
         return "FFmpeg is unavailable; video and audio streams could not be merged"
     if "javascript runtime" in message or "challenge solver" in message:
         return "YouTube JavaScript challenge support is unavailable on this server"
+    if "impersonation" in message or "universal data for rehydration" in message:
+        return "The source's browser verification could not be completed"
     if "requested format is not available" in message:
         return "The selected source format is no longer available"
     if "http error 403" in message or "forbidden" in message:
@@ -88,6 +95,8 @@ def safe_download_error(error: yt_dlp.utils.DownloadError, settings: Settings) -
         return "The source requires an authorized login session"
     if "video unavailable" in message or "media is unavailable" in message:
         return "The source reports that this media is unavailable"
+    if resolve_ffmpeg_location(settings) is None:
+        return "FFmpeg is unavailable; video and audio streams could not be merged"
     return "The source could not be downloaded"
 
 
@@ -208,8 +217,18 @@ def run_download_task(
         common["cookiefile"] = str(cookie_file)
     try:
         inspect_options = dict(common, skip_download=True)
-        with yt_dlp.YoutubeDL(inspect_options) as ydl:
-            preview = ensure_single_item(ydl.extract_info(url, download=False))
+        preview: dict[str, Any] | None = None
+        for attempt in range(3):
+            try:
+                with yt_dlp.YoutubeDL(inspect_options) as ydl:
+                    preview = ensure_single_item(ydl.extract_info(url, download=False))
+                break
+            except yt_dlp.utils.DownloadError as exc:
+                if attempt == 2 or not _is_transient_download_error(exc):
+                    raise
+                time.sleep(0.35 * (attempt + 1))
+        if preview is None:
+            raise RuntimeError("The source did not return media information")
         ensure_extractor_allowed(preview, settings)
         _enforce_media_policy(preview, use_auth=use_auth)
         is_live = bool(preview.get("is_live") or preview.get("live_status") == "is_live")

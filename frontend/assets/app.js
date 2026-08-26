@@ -738,6 +738,69 @@
         retryLabel: "Retry now",
       };
     }
+    if (normalized.includes("ffmpeg is unavailable")) {
+      return {
+        label: "Server setup incomplete",
+        title: "Media processing is not ready",
+        copy: reason,
+        guidance: "Restart OmniFetch after installing the current dependencies, or rebuild the Docker image.",
+        retryLabel: "Retry after restart",
+      };
+    }
+    if (normalized.includes("javascript challenge support")) {
+      return {
+        label: "Server setup incomplete",
+        title: "YouTube support is not ready",
+        copy: reason,
+        guidance: "Install a supported JavaScript runtime and yt-dlp challenge scripts, then restart OmniFetch.",
+        retryLabel: "Retry after restart",
+      };
+    }
+    if (normalized.includes("browser verification")) {
+      return {
+        label: "Source verification changed",
+        title: "The platform did not complete verification",
+        copy: reason,
+        guidance: "Retry once to request a fresh source page. If it persists, update and restart OmniFetch.",
+        retryLabel: "Retry verification",
+      };
+    }
+    if (normalized.includes("selected source format")) {
+      return {
+        label: "Source formats changed",
+        title: "That quality is no longer available",
+        copy: reason,
+        guidance: "Inspect the URL again and choose one of the source's current quality options.",
+        retryLabel: "Inspect again",
+      };
+    }
+    if (normalized.includes("http 403")) {
+      return {
+        label: "Source access denied",
+        title: "The source refused this transfer",
+        copy: reason,
+        guidance: "Inspect the URL again. If the media needs login, enable an authorized session that can view it.",
+        retryLabel: "Inspect again",
+      };
+    }
+    if (normalized.includes("http 404") || normalized.includes("link expired")) {
+      return {
+        label: "Media link expired",
+        title: "The source changed its media link",
+        copy: reason,
+        guidance: "Inspect the original post again so OmniFetch can obtain a fresh media link.",
+        retryLabel: "Inspect again",
+      };
+    }
+    if (normalized.includes("media is unavailable")) {
+      return {
+        label: "Source unavailable",
+        title: "This media is not available from the source",
+        copy: reason,
+        guidance: "Confirm the post still plays in your browser and that the configured account may view it.",
+        retryLabel: "Inspect again",
+      };
+    }
     if (normalized.includes("source could not be downloaded")) {
       return {
         label: "Transfer interrupted",
@@ -960,7 +1023,39 @@
       if (error.status === 413) return { summary: "This media is too large", copy: "Choose a smaller quality or another source." };
       if (error.status === 409) return { summary: "Authenticated mode is unavailable", copy: error.message || "The configured login session is no longer available." };
       if (error.status === 400) return { summary: "This URL cannot be used", copy: error.message || "Check that it is a supported media URL." };
-      if (error.status === 422) return { summary: "No downloadable media was found", copy: "The post may be private, unsupported, expired, or unavailable." };
+      if (error.status === 422) {
+        const detail = String(error.message || "").toLowerCase();
+        if (detail.includes("browser verification")) {
+          return {
+            summary: "The source changed its verification step",
+            copy: "Update or restart OmniFetch, then inspect the original post again.",
+          };
+        }
+        if (detail.includes("authorized login")) {
+          return {
+            summary: "This post needs an authorized session",
+            copy: "Enable the configured login session and confirm that account can view the media.",
+          };
+        }
+        if (detail.includes("not supported")) {
+          return {
+            summary: "This URL is not supported yet",
+            copy: "Use the original post URL from a source supported by the current extraction engine.",
+          };
+        }
+        if (detail.includes("unavailable")) {
+          return {
+            summary: "The source says this media is unavailable",
+            copy: "Confirm the post still plays in your browser, then inspect it again.",
+          };
+        }
+        return {
+          summary: "No downloadable media was found",
+          copy: error.message && !detail.includes("could not be inspected")
+            ? error.message
+            : "The post may be private, unsupported, expired, or unavailable.",
+        };
+      }
       if (error.status >= 500) return { summary: "The server hit a problem", copy: "Try again shortly. No download was started." };
     }
     if (error instanceof TypeError) return { summary: "Cannot reach the OmniFetch server", copy: "Check your connection and try again." };

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yt_dlp
 
 from app.models import ExtractResponse
 from app.services.extractor import (
@@ -13,6 +14,8 @@ from app.services.extractor import (
     ensure_extractor_allowed,
     ensure_single_item,
     extract_metadata,
+    is_retryable_extraction_error,
+    safe_extraction_error,
 )
 
 
@@ -87,6 +90,31 @@ def test_generic_extractor_is_disabled_only_by_explicit_public_policy(settings_f
         info,
         settings_factory(public_mode=False, allow_generic_extractor=False),
     )
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        (
+            "Unable to extract universal data for rehydration https://example.com/?token=secret",
+            "browser verification",
+        ),
+        ("Private video. Sign in to view", "authorized login session"),
+        ("Unsupported URL: https://example.com/private", "not supported"),
+    ],
+)
+def test_extraction_errors_are_classified_without_leaking_urls(message: str, expected: str) -> None:
+    safe = safe_extraction_error(yt_dlp.utils.DownloadError(message))
+
+    assert expected in safe
+    assert "example.com" not in safe
+    assert "secret" not in safe
+
+
+def test_tiktok_verification_failures_are_retryable() -> None:
+    error = yt_dlp.utils.DownloadError("Unable to extract universal data for rehydration")
+
+    assert is_retryable_extraction_error(error) is True
 
 
 def test_extract_metadata_normalizes_qualities_and_ignores_drm(settings_factory) -> None:

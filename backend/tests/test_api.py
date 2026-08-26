@@ -71,7 +71,7 @@ def api_harness(settings_factory, monkeypatch) -> ApiHarness:
         "<!doctype html><title>OmniFetch fixture</title>",
         encoding="utf-8",
     )
-    monkeypatch.setattr(main_module, "_ffmpeg_ready", lambda _settings: True)
+    monkeypatch.setattr(main_module, "_media_runtime_ready", lambda _settings: True)
     monkeypatch.setattr(routes, "validate_url", lambda url, _settings: url)
     monkeypatch.setattr(
         routes,
@@ -138,7 +138,7 @@ def test_readiness_fails_closed_when_worker_or_ffmpeg_is_unavailable(
     assert response.status_code == 503
 
     api_harness.manager.ready = True
-    monkeypatch.setattr(main_module, "_ffmpeg_ready", lambda _settings: False)
+    monkeypatch.setattr(main_module, "_media_runtime_ready", lambda _settings: False)
     response = api_harness.client.get("/ready")
     assert response.status_code == 503
 
@@ -311,7 +311,7 @@ def test_configured_auth_status_exposes_no_path_and_readiness_detects_loss(
         authenticated_media_enabled=True,
         cookie_file=cookie_file,
     )
-    monkeypatch.setattr(main_module, "_ffmpeg_ready", lambda _settings: True)
+    monkeypatch.setattr(main_module, "_media_runtime_ready", lambda _settings: True)
     application = create_app(settings)
 
     with TestClient(application) as client:

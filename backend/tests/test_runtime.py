@@ -10,9 +10,7 @@ def test_explicit_ffmpeg_executable_is_preferred(settings_factory, tmp_path: Pat
     executable.write_text("fixture", encoding="utf-8")
     executable.chmod(0o700)
 
-    resolved = runtime.resolve_ffmpeg_location(
-        settings_factory(ffmpeg_location=str(executable))
-    )
+    resolved = runtime.resolve_ffmpeg_location(settings_factory(ffmpeg_location=str(executable)))
 
     assert resolved == str(executable)
 
@@ -56,3 +54,7 @@ def test_runtime_options_include_local_media_tools(settings_factory, monkeypatch
         "ffmpeg_location": "/opt/ffmpeg",
         "js_runtimes": {"deno": {"path": "/opt/deno"}},
     }
+
+
+def test_impersonation_dependency_is_available() -> None:
+    assert runtime.impersonation_available() is True

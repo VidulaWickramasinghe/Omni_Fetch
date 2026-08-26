@@ -29,6 +29,7 @@ from app.services.extractor import (
     GenericExtractorDisabled,
     UnsupportedCollectionError,
     extract_metadata,
+    safe_extraction_error,
 )
 from app.services.jobs import JobStore
 from app.services.manager import DownloadManager, QueueFullError
@@ -89,7 +90,7 @@ def extract(payload: ExtractRequest, request: Request) -> ExtractResponse:
     except AuthenticationUnavailable as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except yt_dlp.utils.DownloadError as exc:
-        raise HTTPException(status_code=422, detail="The source could not be inspected") from exc
+        raise HTTPException(status_code=422, detail=safe_extraction_error(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     finally:
@@ -147,7 +148,14 @@ def get_job_file(job_id: str, request: Request) -> FileResponse:
     )
 
 
-@router.delete("/jobs/{job_id}")
+@router.delete(
+    "/jobs/{job_id}",
+    summary="Cancel or delete one job",
+    description=(
+        "Enter the job_id returned by POST /api/v1/download. Active jobs are cancelled; "
+        "completed, failed, rejected, or cancelled jobs are deleted."
+    ),
+)
 def delete_job(
     job_id: str, request: Request, response: Response
 ) -> dict[str, object] | JobResponse:

@@ -7,7 +7,7 @@ source, choose a quality policy, and download without re-encoding unless you
 explicitly request MP3 audio.
 
 > [!IMPORTANT]
-> OmniFetch 0.3.1 is a local, single-user MVP. Docker Compose binds it to
+> OmniFetch 0.4.0 is a local, single-user MVP. Docker Compose binds it to
 > `127.0.0.1` deliberately. It is not a hardened public download service, an
 > access-control bypass, credential-sharing service, or DRM circumvention tool.
 
@@ -58,13 +58,19 @@ docker compose down
 `docker compose down -v` also removes the named data volume, so use it only
 when you intentionally want to erase retained downloads.
 
-The image runs as UID/GID `10001`, uses a read-only root filesystem, drops Linux
-capabilities, enables `no-new-privileges`, and writes only to `/data` and a
-small `/tmp` tmpfs. Compose publishes the port on loopback, not all interfaces.
+The image includes FFmpeg, Deno, yt-dlp's external challenge scripts, and its
+browser-impersonation transport for current YouTube and TikTok extraction. It
+runs as UID/GID `10001`, uses a read-only
+root filesystem, drops Linux capabilities, enables `no-new-privileges`, and
+writes only to `/data` and a small `/tmp` tmpfs. Compose publishes the port on
+loopback, not all interfaces.
 
 ## Run from source
 
-Requirements: Python 3.12–3.14 and FFmpeg on `PATH`.
+Requirements: Python 3.12–3.14 and either Node.js 22+ or Deno 2.3+ on
+`PATH`. `make install-dev` installs yt-dlp's challenge scripts and a bundled
+FFmpeg binary for supported platforms. A system FFmpeg installation is used
+when available.
 
 ```bash
 make install-dev

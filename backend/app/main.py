@@ -18,11 +18,23 @@ from app.config import Settings
 from app.services.authentication import authentication_available, require_authentication
 from app.services.jobs import JobStore
 from app.services.manager import DownloadManager
-from app.services.runtime import resolve_ffmpeg_location
+from app.services.runtime import (
+    ejs_available,
+    impersonation_available,
+    resolve_ffmpeg_location,
+    resolve_js_runtimes,
+)
 
 
-def _ffmpeg_ready(settings: Settings) -> bool:
-    return resolve_ffmpeg_location(settings) is not None
+def _media_runtime_ready(settings: Settings) -> bool:
+    """Require the local tools used by the advertised YouTube download path."""
+
+    return (
+        resolve_ffmpeg_location(settings) is not None
+        and bool(resolve_js_runtimes())
+        and ejs_available()
+        and impersonation_available()
+    )
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -66,7 +78,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "Extract and download public or explicitly authorized media through isolated "
             "yt-dlp workers."
         ),
-        version="0.3.1",
+        version="0.4.0",
         lifespan=lifespan,
     )
     application.state.settings = configured
@@ -124,7 +136,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             or not manager.ready
             or not writable
             or not auth_ready
-            or not _ffmpeg_ready(configured)
+            or not _media_runtime_ready(configured)
         ):
             raise HTTPException(status_code=503, detail="Service is not ready")
         return {"status": "ready"}

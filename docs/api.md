@@ -198,7 +198,9 @@ matrix and must not be used as an authorization allowlist.
 
 - `GET /health` is liveness and returns `{"status":"ok"}` while the API can
   answer requests.
-- `GET /ready` checks the manager, writable download root, and FFmpeg/ffprobe;
+- `GET /ready` checks the manager, writable download root, FFmpeg, a supported
+  JavaScript runtime, yt-dlp's challenge scripts, and browser impersonation
+  support for TLS-sensitive sources;
   it returns `{"status":"ready"}` or `503`.
 
 Compose uses `/health` to avoid coupling container restarts to temporary

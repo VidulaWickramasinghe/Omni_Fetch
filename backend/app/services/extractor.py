@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,38 @@ class UnsupportedCollectionError(ValueError):
 
 class GenericExtractorDisabled(ValueError):
     """Raised when public-mode policy disallows yt-dlp's generic extractor."""
+
+
+_TRANSIENT_EXTRACTION_MARKERS = (
+    "universal data for rehydration",
+    "unable to solve js challenge",
+    "unexpected response from webpage request",
+    "http error 403",
+    "http error 429",
+    "too many requests",
+)
+
+
+def is_retryable_extraction_error(error: yt_dlp.utils.DownloadError) -> bool:
+    """Recognize short-lived source verification and throttling responses."""
+
+    message = str(error).lower()
+    return any(marker in message for marker in _TRANSIENT_EXTRACTION_MARKERS)
+
+
+def safe_extraction_error(error: yt_dlp.utils.DownloadError) -> str:
+    """Classify extraction failures without returning URLs or signed tokens."""
+
+    message = str(error).lower()
+    if "impersonation" in message or "universal data for rehydration" in message:
+        return "The source's browser verification could not be completed"
+    if "private video" in message or "sign in" in message or "login" in message:
+        return "The source requires an authorized login session"
+    if "video unavailable" in message or "media is unavailable" in message:
+        return "The source reports that this media is unavailable"
+    if "unsupported url" in message:
+        return "This URL is not supported by the configured extraction engine"
+    return "The source could not be inspected"
 
 
 def base_options(settings: Settings, cookie_file: Path | None = None) -> dict[str, Any]:
@@ -122,10 +155,20 @@ def extract_metadata(
 ) -> ExtractResponse:
     cookie_file = create_cookie_copy(settings, settings.download_dir) if use_auth else None
     try:
-        with ydl_factory(base_options(settings, cookie_file)) as ydl:
-            info = ensure_single_item(ydl.extract_info(url, download=False))
+        info: dict | None = None
+        for attempt in range(3):
+            try:
+                with ydl_factory(base_options(settings, cookie_file)) as ydl:
+                    info = ensure_single_item(ydl.extract_info(url, download=False))
+                break
+            except yt_dlp.utils.DownloadError as exc:
+                if attempt == 2 or not is_retryable_extraction_error(exc):
+                    raise
+                time.sleep(0.35 * (attempt + 1))
     finally:
         remove_cookie_copy(cookie_file)
+    if info is None:
+        raise ValueError("No media information was extracted")
     ensure_extractor_allowed(info, settings)
 
     formats = list(info.get("formats") or [])

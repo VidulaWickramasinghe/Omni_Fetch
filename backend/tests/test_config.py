@@ -46,6 +46,30 @@ def test_from_env_parses_policy_without_creating_directories(tmp_path: Path) -> 
     assert not settings.download_dir.exists()
 
 
+def test_from_env_treats_blank_optional_values_as_unset(tmp_path: Path) -> None:
+    settings = Settings.from_env(
+        {
+            "OMNIFETCH_MAX_FILESIZE_MB": "",
+            "OMNIFETCH_MAX_DURATION_MIN": "   ",
+            "OMNIFETCH_PUBLIC_MODE": "",
+            "OMNIFETCH_ALLOW_GENERIC_EXTRACTOR": "   ",
+            "OMNIFETCH_ALLOWED_PORTS": "",
+            "OMNIFETCH_ALLOWED_ORIGINS": "   ",
+        },
+        base_dir=tmp_path,
+    )
+
+    assert settings.max_filesize_bytes == 2048 * 1024 * 1024
+    assert settings.max_duration_seconds == 180 * 60
+    assert settings.public_mode is False
+    assert settings.allow_generic_extractor is False
+    assert settings.allowed_ports == frozenset({80, 443})
+    assert settings.cors_origins == (
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    )
+
+
 @pytest.mark.parametrize(
     ("env", "message"),
     [

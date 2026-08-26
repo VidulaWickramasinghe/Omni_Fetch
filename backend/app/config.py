@@ -12,7 +12,7 @@ _BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 def _integer(env: Mapping[str, str], name: str, default: int) -> int:
     raw = env.get(name)
-    if raw is None:
+    if raw is None or not raw.strip():
         return default
     try:
         return int(raw)
@@ -22,7 +22,7 @@ def _integer(env: Mapping[str, str], name: str, default: int) -> int:
 
 def _boolean(env: Mapping[str, str], name: str, default: bool) -> bool:
     raw = env.get(name)
-    if raw is None:
+    if raw is None or not raw.strip():
         return default
     normalized = raw.strip().lower()
     if normalized in {"1", "true", "yes", "on"}:
@@ -40,7 +40,7 @@ def _path(raw: str | None, default: Path, *, base_dir: Path) -> Path:
 
 
 def _csv(raw: str | None, default: tuple[str, ...]) -> tuple[str, ...]:
-    if raw is None:
+    if raw is None or not raw.strip():
         return default
     return tuple(item.strip() for item in raw.split(",") if item.strip())
 

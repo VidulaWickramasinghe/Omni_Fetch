@@ -70,6 +70,21 @@ def test_from_env_treats_blank_optional_values_as_unset(tmp_path: Path) -> None:
     )
 
 
+def test_from_env_uses_writable_vercel_scratch_directory(tmp_path: Path) -> None:
+    settings = Settings.from_env({"VERCEL": "1"}, base_dir=tmp_path)
+
+    assert settings.download_dir == Path("/tmp/omnifetch/downloads").resolve()
+
+
+def test_from_env_honors_explicit_download_directory_on_vercel(tmp_path: Path) -> None:
+    settings = Settings.from_env(
+        {"VERCEL": "1", "OMNIFETCH_DOWNLOAD_DIR": "runtime/media"},
+        base_dir=tmp_path,
+    )
+
+    assert settings.download_dir == (tmp_path / "runtime/media").resolve()
+
+
 @pytest.mark.parametrize(
     ("env", "message"),
     [

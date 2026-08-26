@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 _BACKEND_DIR = Path(__file__).resolve().parents[1]
+_VERCEL_DOWNLOAD_DIR = Path("/tmp/omnifetch/downloads")
 
 
 def _integer(env: Mapping[str, str], name: str, default: int) -> int:
@@ -117,6 +118,9 @@ class Settings:
         values = os.environ if env is None else env
         backend_dir = (base_dir or _BACKEND_DIR).resolve(strict=False)
         project_dir = backend_dir.parent
+        default_download_dir = (
+            _VERCEL_DOWNLOAD_DIR if _boolean(values, "VERCEL", False) else backend_dir / "downloads"
+        )
         max_mb = _integer(values, "OMNIFETCH_MAX_FILESIZE_MB", 2048)
         max_minutes = _integer(values, "OMNIFETCH_MAX_DURATION_MIN", 180)
         ttl_hours = _integer(values, "OMNIFETCH_JOB_TTL_HOURS", 6)
@@ -130,7 +134,7 @@ class Settings:
         return cls(
             download_dir=_path(
                 values.get("OMNIFETCH_DOWNLOAD_DIR"),
-                backend_dir / "downloads",
+                default_download_dir,
                 base_dir=backend_dir,
             ),
             frontend_dir=_path(

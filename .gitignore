@@ -35,3 +35,6 @@ secrets/*
 Thumbs.db
 *.swp
 *.swo
+
+# Local Vercel project settings and downloaded environment variables
+.vercel/

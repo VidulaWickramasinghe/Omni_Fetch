@@ -9,11 +9,11 @@ from typing import Any
 
 import yt_dlp
 
-from app.config import Settings
-from app.models import ExtractResponse, QualityInfo
-from app.services.authentication import create_cookie_copy, remove_cookie_copy
-from app.services.platform import platform_from_info
-from app.services.runtime import ytdlp_runtime_options
+from ..config import Settings
+from ..models import ExtractResponse, QualityInfo
+from .authentication import create_cookie_copy, remove_cookie_copy
+from .platform import platform_from_info
+from .runtime import ytdlp_runtime_options
 
 
 class UnsupportedCollectionError(ValueError):

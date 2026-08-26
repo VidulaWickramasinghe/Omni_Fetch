@@ -8,8 +8,8 @@ import yt_dlp
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse
 
-from app.config import Settings
-from app.models import (
+from ..config import Settings
+from ..models import (
     ACTIVE_STATUSES,
     TERMINAL_STATUSES,
     AuthenticationStatus,
@@ -20,21 +20,21 @@ from app.models import (
     JobResponse,
     JobStatus,
 )
-from app.services.authentication import (
+from ..services.authentication import (
     AuthenticationUnavailable,
     authentication_available,
     require_authentication,
 )
-from app.services.extractor import (
+from ..services.extractor import (
     GenericExtractorDisabled,
     UnsupportedCollectionError,
     extract_metadata,
     safe_extraction_error,
 )
-from app.services.jobs import JobStore
-from app.services.manager import DownloadManager, QueueFullError
-from app.services.platform import list_known_platforms
-from app.services.security import UnsafeURLError, validate_url
+from ..services.jobs import JobStore
+from ..services.manager import DownloadManager, QueueFullError
+from ..services.platform import list_known_platforms
+from ..services.security import UnsafeURLError, validate_url
 
 router = APIRouter(prefix="/api/v1")
 

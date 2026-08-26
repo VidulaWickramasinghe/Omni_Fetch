@@ -8,7 +8,7 @@ import stat
 import tempfile
 from pathlib import Path
 
-from app.config import Settings
+from ..config import Settings
 
 _COOKIE_HEADERS = {b"# HTTP Cookie File", b"# Netscape HTTP Cookie File"}
 

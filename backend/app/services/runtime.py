@@ -10,7 +10,7 @@ from pathlib import Path
 import imageio_ffmpeg
 from yt_dlp.dependencies import curl_cffi, yt_dlp_ejs
 
-from app.config import Settings
+from ..config import Settings
 
 _JS_EXECUTABLES = (
     ("deno", "deno"),

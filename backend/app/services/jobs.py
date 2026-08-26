@@ -6,7 +6,7 @@ import threading
 import time
 from collections.abc import Iterable
 
-from app.models import ACTIVE_STATUSES, TERMINAL_STATUSES, JobRecord, JobStatus
+from ..models import ACTIVE_STATUSES, TERMINAL_STATUSES, JobRecord, JobStatus
 
 
 class JobTransitionError(RuntimeError):

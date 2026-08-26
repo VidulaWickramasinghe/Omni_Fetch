@@ -13,12 +13,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import router
-from app.config import Settings
-from app.services.authentication import authentication_available, require_authentication
-from app.services.jobs import JobStore
-from app.services.manager import DownloadManager
-from app.services.runtime import (
+from .api.routes import router
+from .config import Settings
+from .services.authentication import authentication_available, require_authentication
+from .services.jobs import JobStore
+from .services.manager import DownloadManager
+from .services.runtime import (
     ejs_available,
     impersonation_available,
     resolve_ffmpeg_location,

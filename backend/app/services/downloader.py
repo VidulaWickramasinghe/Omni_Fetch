@@ -12,13 +12,13 @@ from typing import Any
 
 import yt_dlp
 
-from app.config import Settings
-from app.models import FormatMode
-from app.services.authentication import create_cookie_copy, remove_cookie_copy
-from app.services.extractor import ensure_extractor_allowed, ensure_single_item
-from app.services.platform import platform_from_info
-from app.services.runtime import resolve_ffmpeg_location, ytdlp_runtime_options
-from app.services.security import validate_url
+from ..config import Settings
+from ..models import FormatMode
+from .authentication import create_cookie_copy, remove_cookie_copy
+from .extractor import ensure_extractor_allowed, ensure_single_item
+from .platform import platform_from_info
+from .runtime import resolve_ffmpeg_location, ytdlp_runtime_options
+from .security import validate_url
 
 
 class DownloadRejected(Exception):

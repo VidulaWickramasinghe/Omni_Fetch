@@ -17,9 +17,9 @@ from contextlib import suppress
 from pathlib import Path
 from typing import IO
 
-from app.config import Settings
-from app.models import ACTIVE_STATUSES, TERMINAL_STATUSES, DownloadRequest, JobRecord, JobStatus
-from app.services.jobs import JobStore, JobTransitionError
+from ..config import Settings
+from ..models import ACTIVE_STATUSES, TERMINAL_STATUSES, DownloadRequest, JobRecord, JobStatus
+from .jobs import JobStore, JobTransitionError
 
 
 class QueueFullError(RuntimeError):

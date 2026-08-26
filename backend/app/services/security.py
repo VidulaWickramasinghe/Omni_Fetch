@@ -7,8 +7,8 @@ import socket
 from collections.abc import Callable, Iterable
 from urllib.parse import urlsplit
 
-from app.config import Settings
-from app.services.platform import is_known_platform_url
+from ..config import Settings
+from .platform import is_known_platform_url
 
 
 class UnsafeURLError(ValueError):

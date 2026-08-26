@@ -7,10 +7,10 @@ import sys
 
 import yt_dlp
 
-from app.config import Settings
-from app.models import FormatMode
-from app.services.downloader import DownloadRejected, run_download_task, safe_download_error
-from app.services.security import UnsafeURLError
+from ..config import Settings
+from ..models import FormatMode
+from ..services.downloader import DownloadRejected, run_download_task, safe_download_error
+from ..services.security import UnsafeURLError
 
 _MAX_INPUT_BYTES = 512 * 1024
 

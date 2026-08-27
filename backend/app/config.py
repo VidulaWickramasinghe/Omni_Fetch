@@ -76,6 +76,7 @@ class Settings:
     authenticated_media_enabled: bool = False
     cookie_file: Path | None = None
     ffmpeg_location: str | None = None
+    serverless: bool = False
 
     def __post_init__(self) -> None:
         positive = {
@@ -118,11 +119,18 @@ class Settings:
         values = os.environ if env is None else env
         backend_dir = (base_dir or _BACKEND_DIR).resolve(strict=False)
         project_dir = backend_dir.parent
-        default_download_dir = (
-            _VERCEL_DOWNLOAD_DIR if _boolean(values, "VERCEL", False) else backend_dir / "downloads"
-        )
-        max_mb = _integer(values, "OMNIFETCH_MAX_FILESIZE_MB", 2048)
-        max_minutes = _integer(values, "OMNIFETCH_MAX_DURATION_MIN", 180)
+        serverless = _boolean(values, "VERCEL", False)
+        default_download_dir = _VERCEL_DOWNLOAD_DIR if serverless else backend_dir / "downloads"
+        # A Vercel Hobby invocation has a five-minute wall-clock ceiling and a
+        # 500 MB writable scratch filesystem. Leave headroom for split streams,
+        # muxing, and delivery of the final response.
+        default_max_mb = 256 if serverless else 2048
+        default_max_minutes = 60 if serverless else 180
+        default_concurrent_jobs = 1 if serverless else 3
+        default_queued_jobs = 0 if serverless else 8
+        default_job_timeout = 240 if serverless else 4 * 3600
+        max_mb = _integer(values, "OMNIFETCH_MAX_FILESIZE_MB", default_max_mb)
+        max_minutes = _integer(values, "OMNIFETCH_MAX_DURATION_MIN", default_max_minutes)
         ttl_hours = _integer(values, "OMNIFETCH_JOB_TTL_HOURS", 6)
         raw_ports = _csv(values.get("OMNIFETCH_ALLOWED_PORTS"), ("80", "443"))
         try:
@@ -144,10 +152,14 @@ class Settings:
             ),
             max_filesize_bytes=max_mb * 1024 * 1024,
             max_duration_seconds=max_minutes * 60,
-            max_concurrent_jobs=_integer(values, "OMNIFETCH_MAX_CONCURRENT_JOBS", 3),
-            max_queued_jobs=_integer(values, "OMNIFETCH_MAX_QUEUED_JOBS", 8),
+            max_concurrent_jobs=_integer(
+                values, "OMNIFETCH_MAX_CONCURRENT_JOBS", default_concurrent_jobs
+            ),
+            max_queued_jobs=_integer(values, "OMNIFETCH_MAX_QUEUED_JOBS", default_queued_jobs),
             job_ttl_seconds=ttl_hours * 3600,
-            job_timeout_seconds=_integer(values, "OMNIFETCH_JOB_TIMEOUT_SECONDS", 4 * 3600),
+            job_timeout_seconds=_integer(
+                values, "OMNIFETCH_JOB_TIMEOUT_SECONDS", default_job_timeout
+            ),
             cleanup_interval_seconds=_integer(values, "OMNIFETCH_CLEANUP_INTERVAL_SECONDS", 600),
             socket_timeout_seconds=_integer(values, "OMNIFETCH_SOCKET_TIMEOUT_SECONDS", 15),
             max_url_length=_integer(values, "OMNIFETCH_MAX_URL_LENGTH", 4096),
@@ -173,6 +185,7 @@ class Settings:
                 else None
             ),
             ffmpeg_location=values.get("OMNIFETCH_FFMPEG_LOCATION") or None,
+            serverless=serverless,
         )
 
     @property

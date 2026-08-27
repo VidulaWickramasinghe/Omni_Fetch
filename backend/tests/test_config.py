@@ -74,6 +74,12 @@ def test_from_env_uses_writable_vercel_scratch_directory(tmp_path: Path) -> None
     settings = Settings.from_env({"VERCEL": "1"}, base_dir=tmp_path)
 
     assert settings.download_dir == Path("/tmp/omnifetch/downloads").resolve()
+    assert settings.serverless is True
+    assert settings.max_filesize_bytes == 256 * 1024 * 1024
+    assert settings.max_duration_seconds == 60 * 60
+    assert settings.max_concurrent_jobs == 1
+    assert settings.max_queued_jobs == 0
+    assert settings.job_timeout_seconds == 240
 
 
 def test_from_env_honors_explicit_download_directory_on_vercel(tmp_path: Path) -> None:

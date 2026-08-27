@@ -104,6 +104,31 @@ and:
 `429` means the bounded active-plus-queued capacity is full and includes a
 `Retry-After` header. Admission and insertion are atomic.
 
+### Vercel streaming delivery
+
+When `VERCEL=1`, the same endpoint returns `200` with media type
+`application/vnd.omnifetch.download`. The response remains open for the whole
+operation so the function cannot pause a detached background worker.
+
+The body begins with newline-delimited JSON control events:
+
+```json
+{"type":"job","job":{"job_id":"…","status":"inspecting","progress":0}}
+{"type":"job","job":{"job_id":"…","status":"downloading","progress":48.2}}
+{"type":"file","name":"Example video.mp4","size":1048576,"content_type":"video/mp4"}
+```
+
+After the newline terminating the `file` event, every remaining response byte
+belongs to the file. `heartbeat` events can appear while a job snapshot is
+unchanged. A terminal rejected/failed/cancelled `job` event ends the stream
+without a file. The bundled frontend parses this protocol, updates the same job
+UI, verifies the declared byte count, and exposes the received file as a local
+browser download.
+
+This profile has no durable queue or cross-request result route. Cancelling the
+browser request cancels the worker, and the server deletes the ephemeral job
+workspace after the stream ends.
+
 ## Read job state
 
 `GET /api/v1/jobs/{job_id}`

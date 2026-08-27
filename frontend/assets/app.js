@@ -4,6 +4,8 @@
   const API_ROOT = "/api/v1";
   const INSPECTION_TIMEOUT_MS = 30_000;
   const REQUEST_TIMEOUT_MS = 15_000;
+  const DIRECT_REQUEST_TIMEOUT_MS = 300_000;
+  const DIRECT_STREAM_MEDIA_TYPE = "application/vnd.omnifetch.download";
 
   const UI_STATE = Object.freeze({
     IDLE: "idle",
@@ -108,6 +110,7 @@
     networkIssue: null,
     authAvailable: false,
     useAuth: false,
+    directDownloadUrl: null,
   };
 
   let inspectionController = null;
@@ -436,17 +439,21 @@
   async function startDownload() {
     if (!model.inspectedUrl || !model.metadata || !model.selectedMode) return;
     stopPolling();
+    revokeDirectDownload();
     creationController?.abort();
     creationController = new AbortController();
     const controller = creationController;
-    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     const maxHeight = VIDEO_MODES.has(model.selectedMode) ? model.selectedQuality?.height ?? null : null;
 
     transition(UI_STATE.CREATING, { error: null, failureScope: null, networkIssue: null, job: null });
     try {
-      const job = await fetchJson(`${API_ROOT}/download`, {
+      const response = await fetch(`${API_ROOT}/download`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Accept: `${DIRECT_STREAM_MEDIA_TYPE}, application/json`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           url: model.inspectedUrl,
           mode: model.selectedMode,
@@ -455,19 +462,138 @@
         }),
         signal: controller.signal,
       });
+      window.clearTimeout(timeout);
+      const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+      if (!response.ok) throw await apiErrorFromResponse(response);
+      if (contentType.startsWith(DIRECT_STREAM_MEDIA_TYPE)) {
+        timeout = window.setTimeout(() => controller.abort(), DIRECT_REQUEST_TIMEOUT_MS);
+        await consumeDirectDownload(response);
+        return;
+      }
+      const job = await parseJsonResponse(response);
       if (!job?.job_id) throw new Error("The server did not return a job identifier.");
       applyJob(job);
       if (!TERMINAL_JOB_STATUSES.has(job.status)) startPolling(job.job_id);
     } catch (error) {
+      if (error.name === "AbortError" && model.ui === UI_STATE.CANCELLED) return;
       const friendly = error.name === "AbortError"
-        ? { summary: "The server did not start the download", copy: "The request timed out. Try again in a moment." }
+        ? { summary: "The download took too long", copy: "The hosting function reached its time limit. Try a shorter video or lower quality." }
         : friendlyError(error, "create");
-      transition(UI_STATE.FAILED, { error: friendly, failureScope: "create", job: null });
-      focusSoon(elements.actionError);
+      if (model.job) {
+        transition(UI_STATE.FAILED, {
+          error: null,
+          failureScope: "job",
+          job: { ...model.job, status: "failed", phase: "failed", error: error.message || friendly.copy },
+        });
+      } else {
+        transition(UI_STATE.FAILED, { error: friendly, failureScope: "create", job: null });
+        focusSoon(elements.actionError);
+      }
     } finally {
       window.clearTimeout(timeout);
       if (creationController === controller) creationController = null;
     }
+  }
+
+  async function consumeDirectDownload(response) {
+    if (!response.body) throw new Error("The server did not provide a download stream.");
+    transition(UI_STATE.ACTIVE, {
+      job: {
+        job_id: "streaming",
+        status: "inspecting",
+        phase: "inspecting",
+        progress: 0,
+        mode: model.selectedMode,
+        max_height: model.selectedQuality?.height ?? null,
+        authenticated: Boolean(model.inspectedUseAuth),
+        title: model.metadata?.title || null,
+        platform: model.metadata?.platform || null,
+        delivery: "stream",
+      },
+      error: null,
+      failureScope: null,
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let controlBytes = new Uint8Array(0);
+    let fileInfo = null;
+    let finalJob = null;
+    const fileChunks = [];
+    let receivedBytes = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (fileInfo) {
+        fileChunks.push(value);
+        receivedBytes += value.byteLength;
+        continue;
+      }
+      controlBytes = appendBytes(controlBytes, value);
+      while (!fileInfo) {
+        const newline = controlBytes.indexOf(10);
+        if (newline < 0) break;
+        const line = decoder.decode(controlBytes.slice(0, newline)).trim();
+        controlBytes = controlBytes.slice(newline + 1);
+        if (!line) continue;
+        let event;
+        try { event = JSON.parse(line); }
+        catch { throw new Error("The server returned an invalid download event."); }
+        if (event.type === "job" && event.job) {
+          if (event.job.status === "completed") finalJob = event.job;
+          else applyJob({ ...event.job, delivery: "stream" });
+        } else if (event.type === "error") {
+          throw new Error(event.detail || "The download stream ended unexpectedly.");
+        } else if (event.type === "file") {
+          fileInfo = event;
+          const delivering = finalJob || model.job || {};
+          applyJob({
+            ...delivering,
+            status: "processing",
+            phase: "delivering",
+            progress: 99,
+            delivery: "stream",
+          });
+          if (controlBytes.byteLength) {
+            fileChunks.push(controlBytes);
+            receivedBytes += controlBytes.byteLength;
+            controlBytes = new Uint8Array(0);
+          }
+        }
+      }
+    }
+
+    if (!fileInfo) {
+      if (model.job && TERMINAL_JOB_STATUSES.has(model.job.status)) return;
+      throw new Error("The download ended before the server delivered a file.");
+    }
+    const expectedSize = Number(fileInfo.size);
+    if (Number.isFinite(expectedSize) && expectedSize >= 0 && receivedBytes !== expectedSize) {
+      throw new Error("The file transfer was interrupted before all bytes arrived.");
+    }
+    const blob = new Blob(fileChunks, { type: fileInfo.content_type || "application/octet-stream" });
+    model.directDownloadUrl = URL.createObjectURL(blob);
+    const completed = {
+      ...(finalJob || model.job),
+      status: "completed",
+      phase: "completed",
+      progress: 100,
+      output_name: fileInfo.name || "download",
+      output_size: blob.size,
+      download_url: model.directDownloadUrl,
+      delivery: "stream",
+    };
+    applyJob(completed);
+    window.setTimeout(() => elements.saveFile.click(), 0);
+  }
+
+  function appendBytes(left, right) {
+    if (!left.byteLength) return right.slice();
+    const combined = new Uint8Array(left.byteLength + right.byteLength);
+    combined.set(left, 0);
+    combined.set(right, left.byteLength);
+    return combined;
   }
 
   function applyJob(job) {
@@ -568,6 +694,19 @@
 
   async function cancelJob() {
     if (!model.job?.job_id || TERMINAL_JOB_STATUSES.has(model.job.status)) return;
+    if (model.job.delivery === "stream" && creationController) {
+      creationController.abort();
+      transition(UI_STATE.CANCELLED, {
+        job: {
+          ...model.job,
+          status: "cancelled",
+          phase: "cancelled",
+          error: null,
+        },
+        networkIssue: null,
+      });
+      return;
+    }
     const jobId = model.job.job_id;
     stopPolling();
     transition(UI_STATE.CANCELLING, { job: { ...model.job, status: "cancelling" }, networkIssue: null });
@@ -844,6 +983,7 @@
     if (job.status === "queued") return "Waiting for an available worker…";
     if (job.status === "inspecting") return "Checking the source and selected streams…";
     if (job.status === "downloading") return "Transferring the source media…";
+    if (job.phase === "delivering") return "Sending the completed file to your browser…";
     if (job.status === "processing") return "Preparing the final file…";
     if (job.status === "completed") return "Your file is ready to save.";
     if (job.status === "cancelling") return "Stopping the active job safely…";
@@ -854,6 +994,7 @@
   }
 
   function safeDownloadUrl(job) {
+    if (job.delivery === "stream" && model.directDownloadUrl) return model.directDownloadUrl;
     const fallback = `${API_ROOT}/jobs/${encodeURIComponent(job.job_id)}/file`;
     if (!job.download_url) return fallback;
     try {
@@ -868,6 +1009,7 @@
     inspectionController?.abort();
     creationController?.abort();
     stopPolling();
+    revokeDirectDownload();
     elements.urlInput.value = "";
     setThumbnail(null);
     transition(UI_STATE.IDLE, {
@@ -884,6 +1026,12 @@
       networkIssue: null,
     });
     elements.urlInput.focus();
+  }
+
+  function revokeDirectDownload() {
+    if (!model.directDownloadUrl) return;
+    URL.revokeObjectURL(model.directDownloadUrl);
+    model.directDownloadUrl = null;
   }
 
   function retryDownload() {
@@ -992,19 +1140,34 @@
     render();
   }
 
+  async function parseJsonResponse(response) {
+    const text = await response.text();
+    if (!text) return null;
+    try { return JSON.parse(text); }
+    catch { throw new Error("The server returned an invalid JSON response."); }
+  }
+
+  async function apiErrorFromResponse(response) {
+    const text = await response.text();
+    let payload = text;
+    if (text) {
+      try { payload = JSON.parse(text); }
+      catch { /* Keep the plain response text. */ }
+    }
+    return new ApiError(
+      response.status,
+      extractDetail(payload) || `Request failed (${response.status})`,
+      payload,
+    );
+  }
+
   async function fetchJson(url, options = {}) {
     const response = await fetch(url, {
       ...options,
       headers: { Accept: "application/json", ...(options.headers || {}) },
     });
-    const text = await response.text();
-    let payload = null;
-    if (text) {
-      try { payload = JSON.parse(text); }
-      catch { payload = text; }
-    }
-    if (!response.ok) throw new ApiError(response.status, extractDetail(payload) || `Request failed (${response.status})`, payload);
-    return payload;
+    if (!response.ok) throw await apiErrorFromResponse(response);
+    return parseJsonResponse(response);
   }
 
   function extractDetail(payload) {
@@ -1164,6 +1327,7 @@
     inspectionController?.abort();
     creationController?.abort();
     stopPolling();
+    revokeDirectDownload();
   });
 
   render();

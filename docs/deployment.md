@@ -4,6 +4,10 @@ The supported Phase-1 deployment is one trusted user on one machine. Compose
 binds the combined API/frontend to `127.0.0.1`; it is not a public-production
 profile.
 
+Vercel is available as a separate bounded streaming profile for short,
+single-user transfers. It does not provide durable jobs or make the service
+safe for anonymous public use.
+
 ## Compose profile
 
 ```bash
@@ -138,6 +142,44 @@ docker volume inspect omnifetch_omnifetch-data
 
 Do not back up the volume unless you have a specific retention need: it can
 contain copyrighted media and source-derived metadata. Treat it as sensitive.
+
+## Vercel streaming profile
+
+The root `pyproject.toml` declares `backend.app.main:app`, and `vercel.json`
+sets a 300-second maximum duration for the Python function. Vercel automatically
+sets `VERCEL=1`, which changes the application defaults to:
+
+| Limit | Vercel default |
+|---|---:|
+| Writable root | `/tmp/omnifetch/downloads` |
+| Concurrent transfers | `1` |
+| Queued transfers | `0` |
+| Job timeout | `240` seconds |
+| Aggregate media bytes | `256` MiB |
+| Known media duration | `60` minutes |
+
+The frontend and backend must be deployed together. On this profile,
+`POST /api/v1/download` immediately starts a streaming response, sends safe job
+events while the child process runs, then streams the final file over the same
+invocation. This fixes the detached-job failure where a function returned `202`
+and paused while the UI remained at `Inspect`.
+
+The whole operation, including delivery to the browser, must finish before the
+hosting plan terminates the invocation. Files are ephemeral and are deleted
+after the response closes. Long videos, slow clients, durable history, retries
+across restarts, and multi-user ownership still require persistent workers,
+durable queueing, and object storage.
+
+Deploy with Git integration or:
+
+```bash
+vercel --prod
+```
+
+After deployment, verify `/health`, `/ready`, and a small controlled media
+fixture before testing a social platform. Keep `.vercelignore` and the
+`excludeFiles` rule in place so local downloads, tests, secrets, and development
+artifacts do not enter the function bundle.
 
 ## Health and operations
 

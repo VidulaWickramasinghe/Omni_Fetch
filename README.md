@@ -5,7 +5,7 @@
 <p align="center">
   <a href="pyproject.toml"><img alt="OmniFetch 0.4.0" src="https://img.shields.io/badge/OmniFetch-0.4.0-ff9557?style=flat-square"></a>
   <a href="pyproject.toml"><img alt="Python 3.12 to 3.14" src="https://img.shields.io/badge/Python-3.12%E2%80%933.14-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white"></a>
-  <a href="backend/tests"><img alt="139 tests passing" src="https://img.shields.io/badge/tests-139%20passing-7be0ca?style=flat-square"></a>
+  <a href="backend/tests"><img alt="141 tests passing" src="https://img.shields.io/badge/tests-141%20passing-7be0ca?style=flat-square"></a>
   <a href="docker-compose.yml"><img alt="Docker Compose supported" src="https://img.shields.io/badge/deploy-Docker%20Compose-2496ED?style=flat-square&amp;logo=docker&amp;logoColor=white"></a>
   <a href="SECURITY.md"><img alt="Self-hosted and local" src="https://img.shields.io/badge/profile-self--hosted-172330?style=flat-square"></a>
 </p>
@@ -26,10 +26,10 @@
 
 > [!IMPORTANT]
 > OmniFetch 0.4.0 is a local, single-user application. The supported runtime is
-> a persistent host—preferably the hardened Docker Compose profile—not a
-> request-scoped serverless function. It is not an access-control bypass, DRM
-> circumvention tool, credential-sharing service, or production-ready public
-> downloader.
+> preferably the hardened Docker Compose profile. Vercel uses a bounded
+> single-request streaming mode for short transfers; it is not a durable job
+> runtime. OmniFetch is not an access-control bypass, DRM circumvention tool,
+> credential-sharing service, or production-ready public downloader.
 
 ## Why OmniFetch
 
@@ -192,30 +192,32 @@ checking disk, memory, CPU, network, and source behavior together.
 | **Docker Compose on one trusted machine** | Supported | Recommended Phase-1 profile; loopback-only port, read-only root, non-root user, bounded resources, persistent data volume. |
 | **Direct source run** | Supported | Best for development; the host must provide the media runtime dependencies. |
 | **Persistent container or VM** | Adaptable | Add TLS, OmniFetch user authentication, quotas, rate limits, durable queueing, object storage, and enforced worker egress before public use. |
-| **Vercel or request-scoped serverless** | **Not supported for downloads** | The UI and health route may start, but in-memory jobs, child workers, ephemeral local files, and work that must outlive one request do not form a reliable transfer runtime. |
+| **Vercel Python Function** | Limited | Uses one streaming response that keeps extraction, transfer, progress, and file delivery inside the same invocation. Intended for short, bounded media—not durable or multi-user jobs. |
 
-### Why Vercel builds but downloads still fail
+### How Vercel delivery differs
 
 `pyproject.toml` declares the FastAPI entrypoint and OmniFetch automatically
 uses `/tmp/omnifetch/downloads` on Vercel, avoiding writes to the read-only
-deployment bundle. That fixes application startup only.
+deployment bundle. On Vercel, `POST /api/v1/download` does not return a detached
+job identifier. It opens a streaming response immediately, sends sanitized job
+events while the isolated worker runs, and then sends the completed file over
+that same response. This prevents the function from pausing at `Inspect` after
+an early `202` response and bypasses the normal buffered-response size ceiling.
 
-A transfer still depends on one warm process retaining its in-memory job store,
-supervising a child process, preserving temporary files, and later serving the
-result. A request-scoped function can be frozen, recycled, or routed to another
-instance between those steps. The typical symptom is a job that remains at
-`Inspect` or reports **“The downloader stopped before producing a file.”**
-
-For complete downloads, deploy the existing Docker image to persistent compute
-with writable storage. A future serverless architecture would require a durable
-queue, separate long-running workers, object storage, and signed result URLs.
+The Vercel profile defaults to one active transfer, no queue, a 240-second job
+deadline, and a 256 MiB media-byte ceiling. The whole invocation—including file
+delivery—must still finish within the hosting plan's function-duration limit.
+For durable, long-running, or multi-user downloads, deploy the Docker image to
+persistent compute or add a durable queue, workers, object storage, and signed
+result URLs.
 
 ### Deployment troubleshooting
 
 | Symptom | Check |
 |---|---|
 | `500 FUNCTION_INVOCATION_FAILED` with a read-only path | Redeploy the current code; Vercel must use `/tmp/omnifetch/downloads`, never `backend/downloads`. |
-| Download stops before producing a file | Confirm the API runs on persistent compute, then inspect worker stderr in the server logs. |
+| Download remains at `Inspect` on Vercel | Redeploy the current frontend and backend together; the response must use `application/vnd.omnifetch.download`. |
+| Download stops before producing a file | Inspect worker stderr and confirm the selected media fits the runtime's size and duration limits. |
 | `/ready` returns `503` | Verify writable storage, FFmpeg, Deno/Node, yt-dlp external scripts, impersonation support, and the optional cookie source. |
 | A platform suddenly fails | Update yt-dlp within the supported range and review safe server logs; extractors and platform anti-bot behavior change independently. |
 | Queue returns `429` | Wait for an active job to finish or deliberately adjust concurrency and resource ceilings. |
@@ -297,7 +299,7 @@ make format-check
 make audit
 ```
 
-The deterministic suite currently collects **139 cases** across API contracts,
+The deterministic suite currently collects **141 cases** across API contracts,
 URL policy, extraction, download bounds, job state, authentication, runtime
 discovery, process supervision, filesystem containment, and cleanup. Third-party
 network calls are mocked; real-site compatibility checks are intentionally not

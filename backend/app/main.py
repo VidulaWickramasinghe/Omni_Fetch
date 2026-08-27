@@ -27,14 +27,16 @@ from .services.runtime import (
 
 
 def _media_runtime_ready(settings: Settings) -> bool:
-    """Require the local tools used by the advertised YouTube download path."""
+    """Require the media tools used by the configured delivery profile."""
 
-    return (
-        resolve_ffmpeg_location(settings) is not None
-        and bool(resolve_js_runtimes())
-        and ejs_available()
-        and impersonation_available()
-    )
+    core_ready = resolve_ffmpeg_location(settings) is not None and impersonation_available()
+    if settings.serverless:
+        # Vercel has no bundled JavaScript runtime, but its streaming delivery
+        # supports sources such as Instagram and TikTok that use the core media
+        # and browser-impersonation toolchain. YouTube reports a scoped error if
+        # a source requires JavaScript challenge execution.
+        return core_ready
+    return core_ready and bool(resolve_js_runtimes()) and ejs_available()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:

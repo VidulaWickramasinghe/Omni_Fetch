@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import pytest
@@ -32,6 +33,7 @@ class StubManager:
         self.store = store
         self.queue_full = False
         self.ready = True
+        self.complete_on_submit = False
 
     def submit(self, request: DownloadRequest) -> JobRecord:
         if self.queue_full:
@@ -42,6 +44,21 @@ class StubManager:
             max_height=request.max_height,
             use_auth=request.use_auth,
         )
+        if self.complete_on_submit:
+            workspace = self.settings.job_workspace(job.job_id)
+            workspace.mkdir(parents=True)
+            output = workspace / "fixture.mp4"
+            output.write_bytes(b"streamed fixture media")
+            job = job.model_copy(
+                update={
+                    "status": JobStatus.COMPLETED,
+                    "progress": 100,
+                    "output_path": output,
+                    "download_name": "Streamed fixture.mp4",
+                    "output_size": output.stat().st_size,
+                    "completed_at": 123,
+                }
+            )
         accepted = self.store.try_create(job, self.settings.job_capacity)
         if accepted is None:
             raise QueueFullError("The download queue is full")
@@ -141,6 +158,16 @@ def test_readiness_fails_closed_when_worker_or_ffmpeg_is_unavailable(
     monkeypatch.setattr(main_module, "_media_runtime_ready", lambda _settings: False)
     response = api_harness.client.get("/ready")
     assert response.status_code == 503
+
+
+def test_serverless_readiness_uses_core_media_runtime(settings_factory, monkeypatch) -> None:
+    monkeypatch.setattr(main_module, "resolve_ffmpeg_location", lambda _settings: "/ffmpeg")
+    monkeypatch.setattr(main_module, "impersonation_available", lambda: True)
+    monkeypatch.setattr(main_module, "resolve_js_runtimes", lambda: {})
+    monkeypatch.setattr(main_module, "ejs_available", lambda: False)
+
+    assert main_module._media_runtime_ready(settings_factory(serverless=True)) is True
+    assert main_module._media_runtime_ready(settings_factory(serverless=False)) is False
 
 
 def test_security_headers_and_cors_are_explicit(api_harness: ApiHarness) -> None:
@@ -270,6 +297,38 @@ def test_download_admission_uses_safe_policy_and_location(api_harness: ApiHarnes
     assert stored.source_url == source
     assert stored.max_height == 1080
     assert source not in response.text
+
+
+def test_serverless_download_stream_keeps_work_and_file_in_one_response(
+    api_harness: ApiHarness,
+) -> None:
+    api_harness.app.state.settings = replace(api_harness.settings, serverless=True)
+    api_harness.manager.complete_on_submit = True
+
+    with api_harness.client.stream(
+        "POST",
+        "/api/v1/download",
+        json={"url": "https://example.com/video", "mode": "mp4"},
+    ) as response:
+        body = response.read()
+
+    assert response.status_code == 200
+    assert response.headers["x-omnifetch-delivery"] == "stream"
+    assert response.headers["content-type"].startswith("application/vnd.omnifetch.download")
+    first_break = body.index(b"\n")
+    second_break = body.index(b"\n", first_break + 1)
+    job_event = json.loads(body[:first_break])
+    file_event = json.loads(body[first_break + 1 : second_break])
+    assert job_event["type"] == "job"
+    assert job_event["job"]["status"] == "completed"
+    assert file_event == {
+        "type": "file",
+        "name": "Streamed fixture.mp4",
+        "size": len(b"streamed fixture media"),
+        "content_type": "video/mp4",
+    }
+    assert body[second_break + 1 :] == b"streamed fixture media"
+    assert api_harness.store.get(job_event["job"]["job_id"]) is None
 
 
 def test_auth_status_is_safe_and_auth_requests_fail_closed_when_disabled(

@@ -58,3 +58,12 @@ def test_runtime_options_include_local_media_tools(settings_factory, monkeypatch
 
 def test_impersonation_dependency_is_available() -> None:
     assert runtime.impersonation_available() is True
+
+
+def test_browser_impersonation_retry_uses_latest_chrome_profile(monkeypatch) -> None:
+    monkeypatch.setattr(runtime, "impersonation_available", lambda: True)
+
+    target = runtime.browser_impersonation_options()["impersonate"]
+
+    assert target.client == "chrome"
+    assert target.version is None

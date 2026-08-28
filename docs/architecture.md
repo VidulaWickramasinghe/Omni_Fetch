@@ -65,6 +65,11 @@ yt-dlp decides whether a site has an extractor and returns source metadata.
 OmniFetch normalizes that data into its own API schema. Platform labels are for
 display; they are not a static promise that every URL on a domain works.
 
+The downloader performs its own policy preflight, then passes that already
+processed extraction result back to yt-dlp for transfer. This avoids an
+unnecessary second social-page request. A fresh extraction is bounded to one
+retry and occurs only after a recognized transient media-transfer failure.
+
 Public mode can disable the Generic extractor because accepting arbitrary web
 pages materially broadens SSRF and bandwidth-relay risk. Trusted local mode
 retains yt-dlp's broader compatibility; neither mode replaces egress isolation.

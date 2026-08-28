@@ -3,7 +3,7 @@
   "functions": {
     "backend/app/main.py": {
       "maxDuration": 300,
-      "excludeFiles": "{.git/**,.github/**,.idea/**,.vscode/**,.vercel/**,.env,.env.*,backend/.venv/**,backend/downloads/**,backend/tests/**,docs/**,secrets/**,htmlcov/**,coverage.xml}"
+      "excludeFiles": "{.git/**,.github/**,.idea/**,.vscode/**,.vercel/**,.env,.env.*,**/__pycache__/**,**/*.pyc,backend/.venv/**,backend/downloads/**,backend/tests/**,docs/**,secrets/**,htmlcov/**,.pytest_cache/**,.ruff_cache/**,.coverage,coverage.xml}"
     }
   }
 }

@@ -100,6 +100,9 @@ def test_generic_extractor_is_disabled_only_by_explicit_public_policy(settings_f
             "browser verification",
         ),
         ("Private video. Sign in to view", "authorized login session"),
+        ("Account authentication is required", "authorized login session"),
+        ("Unable to download webpage: HTTP Error 404: Not Found", "unavailable"),
+        ("Unable to download JSON metadata: HTTP Error 400: Bad Request", "recognize"),
         ("Unsupported URL: https://example.com/private", "not supported"),
     ],
 )
@@ -208,6 +211,95 @@ def test_extract_metadata_reports_live_and_audio_only_media(settings_factory) ->
     assert response.supports_video is False
     assert response.supports_audio is True
     assert response.qualities == []
+
+
+@pytest.mark.parametrize("extractor_key", ["LinkedIn", "SnapchatSpotlight", "Tumblr"])
+def test_extract_metadata_accepts_codec_light_mp4_streams(
+    settings_factory, extractor_key: str
+) -> None:
+    info = {
+        "extractor_key": extractor_key,
+        "title": "Public social video",
+        "formats": [
+            {
+                "format_id": "source",
+                "url": "https://cdn.example/video.mp4",
+                "ext": "mp4",
+                "height": 720,
+            }
+        ],
+    }
+
+    response = extract_metadata(
+        "https://example.com/public-post",
+        settings_factory(),
+        ydl_factory=fake_factory(info, []),
+    )
+
+    assert response.supports_video is True
+    assert response.supports_audio is True
+    assert [quality.label for quality in response.qualities] == ["720p"]
+
+
+def test_extract_metadata_accepts_top_level_direct_media(settings_factory) -> None:
+    response = extract_metadata(
+        "https://www.snapchat.com/spotlight/fixture",
+        settings_factory(),
+        ydl_factory=fake_factory(
+            {
+                "extractor_key": "SnapchatSpotlight",
+                "title": "Spotlight snap",
+                "url": "https://cdn.example/spotlight.mp4",
+                "ext": "mp4",
+                "height": 1080,
+            },
+            [],
+        ),
+    )
+
+    assert response.platform == "snapchat"
+    assert response.supports_video is True
+    assert response.supports_audio is True
+    assert [quality.id for quality in response.qualities] == ["height:1080"]
+
+
+def test_transient_extraction_retry_enables_browser_impersonation(
+    settings_factory, monkeypatch
+) -> None:
+    attempts: list[FakeYDL] = []
+
+    def factory(options: dict[str, Any]) -> FakeYDL:
+        info: dict[str, Any]
+        if attempts:
+            info = {
+                "extractor_key": "Reddit",
+                "formats": [{"ext": "mp4", "url": "https://cdn.example/video.mp4"}],
+            }
+        else:
+            info = {}
+        instance = FakeYDL(options, info)
+        if not attempts:
+            instance.extract_info = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                yt_dlp.utils.DownloadError("Account authentication is required")
+            )
+        attempts.append(instance)
+        return instance
+
+    monkeypatch.setattr(
+        "app.services.extractor.browser_impersonation_options",
+        lambda: {"impersonate": "chrome"},
+    )
+    monkeypatch.setattr("app.services.extractor.time.sleep", lambda _seconds: None)
+
+    response = extract_metadata(
+        "https://www.reddit.com/comments/fixture",
+        settings_factory(),
+        ydl_factory=factory,
+    )
+
+    assert response.supports_video is True
+    assert "impersonate" not in attempts[0].options
+    assert attempts[1].options["impersonate"] == "chrome"
 
 
 def test_extract_metadata_uses_and_removes_private_cookie_copy(settings_factory, tmp_path) -> None:

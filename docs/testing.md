@@ -46,8 +46,9 @@ late worker update cannot resurrect a cancelled/deleted job.
 Fake yt-dlp sessions verify that API inputs create only server-owned format
 selectors, playlists/live/DRM/unauthenticated-private media fail closed, byte
 and time ceilings cancel work, finite media without duration metadata remains
-downloadable, recognized transient media URLs receive one bounded fresh
-extraction, final paths remain contained, and partial data is cleaned.
+downloadable, codec-light direct MP4 streams remain selectable, recognized
+transient source checks receive a bounded browser-impersonated retry, final
+paths remain contained, and partial data is cleaned.
 
 Authentication tests use synthetic Netscape records only. They cover disabled,
 invalid, oversized, symlinked, missing, and valid sources; `0600` operation

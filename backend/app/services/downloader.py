@@ -17,7 +17,11 @@ from ..models import FormatMode
 from .authentication import create_cookie_copy, remove_cookie_copy
 from .extractor import ensure_extractor_allowed, ensure_single_item
 from .platform import platform_from_info
-from .runtime import resolve_ffmpeg_location, ytdlp_runtime_options
+from .runtime import (
+    browser_impersonation_options,
+    resolve_ffmpeg_location,
+    ytdlp_runtime_options,
+)
 from .security import validate_url
 
 
@@ -41,6 +45,7 @@ _TRANSIENT_DOWNLOAD_MARKERS = (
     "connection reset",
     "remote end closed connection",
     "did not get any data blocks",
+    "account authentication is required",
 )
 
 
@@ -92,6 +97,8 @@ def safe_download_error(error: yt_dlp.utils.DownloadError, settings: Settings) -
     if "http error 404" in message or "not found" in message:
         return "The source media link expired or was not found (HTTP 404)"
     if "private video" in message or "sign in" in message or "login" in message:
+        return "The source requires an authorized login session"
+    if "authentication is required" in message:
         return "The source requires an authorized login session"
     if "video unavailable" in message or "media is unavailable" in message:
         return "The source reports that this media is unavailable"
@@ -220,7 +227,10 @@ def run_download_task(
         preview: dict[str, Any] | None = None
         for attempt in range(3):
             try:
-                with yt_dlp.YoutubeDL(inspect_options) as ydl:
+                attempt_options = dict(inspect_options)
+                if attempt:
+                    attempt_options.update(browser_impersonation_options())
+                with yt_dlp.YoutubeDL(attempt_options) as ydl:
                     preview = ensure_single_item(ydl.extract_info(url, download=False))
                 break
             except yt_dlp.utils.DownloadError as exc:
@@ -275,8 +285,19 @@ def run_download_task(
         info: dict[str, Any] | None = None
         for attempt in range(2):
             try:
-                with yt_dlp.YoutubeDL(options) as ydl:
-                    info = ensure_single_item(ydl.extract_info(url, download=True))
+                attempt_options = dict(options)
+                if attempt:
+                    attempt_options.update(browser_impersonation_options())
+                with yt_dlp.YoutubeDL(attempt_options) as ydl:
+                    # Reuse the policy-checked result on the normal path. Social
+                    # pages commonly rate-limit a second immediate page fetch,
+                    # while their extracted media URLs are still valid.
+                    result = (
+                        ydl.process_ie_result(preview, download=True)
+                        if attempt == 0
+                        else ydl.extract_info(url, download=True)
+                    )
+                    info = ensure_single_item(result)
                 break
             except yt_dlp.utils.DownloadError as exc:
                 if attempt or not _is_transient_download_error(exc):

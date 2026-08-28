@@ -42,6 +42,8 @@ instead of arbitrary downloader options.
 | Capability | What it means |
 |---|---|
 | **Source-aware quality** | Lists the real video and audio choices reported by the source; no artificial upscaling. |
+| **URL-aware platform control** | Detects LinkedIn, Reddit, Snapchat, Bluesky, Tumblr, and other known services while you paste, then labels the inspection action before any request is sent. |
+| **Codec-light source support** | Accepts direct MP4 streams from social extractors even when the source omits codec details. |
 | **Loss-conscious output** | Preserves source streams where possible. MP3 conversion is explicit because it is lossy. |
 | **Bounded jobs** | Enforces queue, concurrency, byte, duration, wall-time, expiry, and cleanup limits. |
 | **Isolated execution** | Runs each download in a killable child process with a contained per-job workspace. |
@@ -50,6 +52,8 @@ instead of arbitrary downloader options.
 | **Single-origin UI and API** | FastAPI serves the static frontend and versioned JSON API from one process. |
 | **Operational visibility** | Provides liveness, readiness, progress polling, cancellation, safe errors, and expiry metadata. |
 
+OmniFetch 0.5 uses a tested, reproducibly pinned yt-dlp nightly because yt-dlp
+recommends its nightly channel for regular users who need current site fixes.
 Site compatibility can change as platforms and yt-dlp evolve. A URL that works
 today may require a dependency update later even when OmniFetch itself has not
 changed.
@@ -62,8 +66,11 @@ changed.
 
 The browser first requests metadata without downloading media. OmniFetch checks
 the URL and source policy, normalizes the available formats, then atomically
-admits a bounded job. A supervised child process runs yt-dlp and FFmpeg, reports
-sanitized progress events, and writes one final file to an isolated directory.
+admits a bounded job. Inside that job, the validated extraction result is reused
+for transfer so a social post is not fetched twice in quick succession. A fresh
+extraction is attempted only after a recognized expired or denied media URL. A
+supervised child process runs yt-dlp and FFmpeg, reports sanitized progress
+events, and writes one final file to an isolated directory.
 
 The Phase-1 job store is intentionally in memory. Restarting the API terminates
 managed workers and loses active job records; an independent storage sweep
@@ -299,7 +306,7 @@ make format-check
 make audit
 ```
 
-The deterministic suite currently collects **141 cases** across API contracts,
+The deterministic suite currently collects **160 cases** across API contracts,
 URL policy, extraction, download bounds, job state, authentication, runtime
 discovery, process supervision, filesystem containment, and cleanup. Third-party
 network calls are mocked; real-site compatibility checks are intentionally not

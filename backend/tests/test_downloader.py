@@ -89,6 +89,8 @@ def test_contained_file_rejects_escape_and_symlink(tmp_path: Path) -> None:
 
 class SuccessfulYDL:
     instances: ClassVar[list[SuccessfulYDL]] = []
+    processed_preview_calls: ClassVar[int] = 0
+    fresh_download_calls: ClassVar[int] = 0
     preview: ClassVar[dict[str, Any]] = {
         "title": "Owned / test?",
         "duration": 12,
@@ -109,6 +111,16 @@ class SuccessfulYDL:
     def extract_info(self, _url: str, *, download: bool) -> dict[str, Any]:
         if not download:
             return self.preview
+        self.__class__.fresh_download_calls += 1
+        return self._finish_download()
+
+    def process_ie_result(self, info: dict[str, Any], *, download: bool) -> dict[str, Any]:
+        assert isinstance(info, dict)
+        assert download is True
+        self.__class__.processed_preview_calls += 1
+        return self._finish_download()
+
+    def _finish_download(self) -> dict[str, Any]:
         workspace = Path(self.options["outtmpl"]).parent
         output = workspace / "media.mkv"
         output.write_bytes(b"media")
@@ -127,6 +139,8 @@ def test_download_task_emits_sanitized_completion_and_uses_isolated_workspace(
     settings = settings_factory()
     settings.prepare_runtime_dirs()
     SuccessfulYDL.instances = []
+    SuccessfulYDL.processed_preview_calls = 0
+    SuccessfulYDL.fresh_download_calls = 0
     monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", SuccessfulYDL)
     monkeypatch.setattr(downloader, "validate_url", lambda url, _settings: url)
     events: list[dict[str, object]] = []
@@ -141,6 +155,8 @@ def test_download_task_emits_sanitized_completion_and_uses_isolated_workspace(
     )
 
     assert len(SuccessfulYDL.instances) == 2
+    assert SuccessfulYDL.processed_preview_calls == 1
+    assert SuccessfulYDL.fresh_download_calls == 0
     inspect_options = SuccessfulYDL.instances[0].options
     download_options = SuccessfulYDL.instances[1].options
     assert inspect_options["skip_download"] is True
@@ -310,6 +326,9 @@ class TransientDownloadYDL(SuccessfulYDL):
             )
         return super().extract_info(url, download=download)
 
+    def process_ie_result(self, _info: dict[str, Any], *, download: bool) -> dict[str, Any]:
+        return self.extract_info("https://example.invalid/reused-preview", download=download)
+
 
 def test_transient_media_url_failure_gets_one_fresh_bounded_retry(
     monkeypatch, settings_factory
@@ -320,6 +339,9 @@ def test_transient_media_url_failure_gets_one_fresh_bounded_retry(
     TransientDownloadYDL.download_attempts = 0
     monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", TransientDownloadYDL)
     monkeypatch.setattr(downloader, "validate_url", lambda url, _settings: url)
+    monkeypatch.setattr(
+        downloader, "browser_impersonation_options", lambda: {"impersonate": "chrome"}
+    )
 
     downloader.run_download_task(
         job_id="9" * 32,
@@ -332,6 +354,7 @@ def test_transient_media_url_failure_gets_one_fresh_bounded_retry(
 
     assert TransientDownloadYDL.download_attempts == 2
     assert len(TransientDownloadYDL.instances) == 3
+    assert TransientDownloadYDL.instances[2].options["impersonate"] == "chrome"
     assert not (settings.job_workspace("9" * 32) / "media.part").exists()
 
 
@@ -358,6 +381,9 @@ def test_transient_source_verification_gets_bounded_preflight_retries(
     monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", TransientInspectionYDL)
     monkeypatch.setattr(downloader, "validate_url", lambda url, _settings: url)
     monkeypatch.setattr(downloader.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        downloader, "browser_impersonation_options", lambda: {"impersonate": "chrome"}
+    )
 
     downloader.run_download_task(
         job_id="8" * 32,
@@ -369,6 +395,8 @@ def test_transient_source_verification_gets_bounded_preflight_retries(
     )
 
     assert TransientInspectionYDL.inspect_attempts == 3
+    assert "impersonate" not in TransientInspectionYDL.instances[0].options
+    assert TransientInspectionYDL.instances[1].options["impersonate"] == "chrome"
 
 
 def test_authenticated_download_uses_temporary_cookie_copy_and_allows_private_media(

@@ -1,6 +1,6 @@
 [project]
 name = "omnifetch"
-version = "0.4.0"
+version = "0.5.0"
 description = "Universal media downloader and extractor"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
@@ -9,7 +9,7 @@ dependencies = [
   "imageio-ffmpeg>=0.6.0,<0.7",
   "pydantic>=2.13.4,<3",
   "uvicorn[standard]>=0.52.0,<0.53",
-  "yt-dlp[default,curl-cffi]>=2026.8.19,<2026.9",
+  "yt-dlp[default,curl-cffi]==2026.8.27.231323.dev0",
 ]
 
 [tool.vercel]

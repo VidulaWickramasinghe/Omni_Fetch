@@ -1895,6 +1895,63 @@ body::after {
   gap: 12px;
 }
 
+.url-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.platform-detect {
+  display: inline-flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 15px;
+  border: 1px solid rgba(101, 222, 195, 0.26);
+  border-radius: 14px;
+  background: rgba(101, 222, 195, 0.075);
+  color: var(--mint);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 760;
+  white-space: nowrap;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.platform-detect[hidden] {
+  display: none;
+}
+
+.platform-detect:hover:not(:disabled) {
+  border-color: rgba(101, 222, 195, 0.5);
+  background: rgba(101, 222, 195, 0.12);
+  transform: translateY(-1px);
+}
+
+.platform-detect:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(124, 216, 255, 0.12);
+}
+
+.platform-detect:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.platform-detect__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 5px rgba(101, 222, 195, 0.09);
+}
+
+.url-actions .inspect-button {
+  flex: 1 0 auto;
+  white-space: nowrap;
+}
+
 .url-control {
   padding: 5px;
   border: 1px solid rgba(161, 196, 225, 0.22);
@@ -2163,6 +2220,10 @@ body::after {
 
   .hero h1 {
     font-size: 2.75rem;
+  }
+
+  .url-actions {
+    flex-direction: column;
   }
 }
 

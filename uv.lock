@@ -402,7 +402,7 @@ wheels = [
 
 [[package]]
 name = "omnifetch"
-version = "0.4.0"
+version = "0.5.0"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
@@ -418,7 +418,7 @@ requires-dist = [
     { name = "imageio-ffmpeg", specifier = ">=0.6.0,<0.7" },
     { name = "pydantic", specifier = ">=2.13.4,<3" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.0,<0.53" },
-    { name = "yt-dlp", extras = ["default", "curl-cffi"], specifier = ">=2026.8.19,<2026.9" },
+    { name = "yt-dlp", extras = ["default", "curl-cffi"], specifier = "==2026.8.27.231323.dev0" },
 ]
 
 [[package]]
@@ -884,11 +884,11 @@ wheels = [
 
 [[package]]
 name = "yt-dlp"
-version = "2026.8.19"
+version = "2026.8.27.231323.dev0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/1e/e0/832fa4ca334b766a06933a196066edc3dba37cdb6f14cd98d59bcc69a4b4/yt_dlp-2026.8.19.tar.gz", hash = "sha256:9e213e48cea35c66b378e4447903f118f6392a5fa380a2b6d7070ec86f4e0af1", size = 3052025, upload-time = "2026-08-19T23:48:59.291Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/16/04/691bd17d96d7caeeb02c6c2878fba328f2535f37eb60d2f89418ef0a819e/yt_dlp-2026.8.27.231323.dev0.tar.gz", hash = "sha256:66554df46632f22b8ff7c978e02f986078ce9965d9a001892192c9fd794ae599", size = 3053527, upload-time = "2026-08-27T23:17:28.256Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/69/b2/8cd1613f56eed7ceb64fbd4df3f1c01246bfb098e6f398228bafda22b80b/yt_dlp-2026.8.19-py3-none-any.whl", hash = "sha256:1d57897e94c6665a0a6f9bc54b34e584284e32c034ffab3a7df25d8f7b24eedf", size = 3185533, upload-time = "2026-08-19T23:48:56.925Z" },
+    { url = "https://files.pythonhosted.org/packages/11/e4/a6c071a75c7ab50d86c0ca8df0702f7719bf2893b704520c3400b360a416/yt_dlp-2026.8.27.231323.dev0-py3-none-any.whl", hash = "sha256:f651b17cf3da7277a774dcb5152e8a5bcc516441d4a233b03a9732de8fbc24fc", size = 3186414, upload-time = "2026-08-27T23:17:25.679Z" },
 ]
 
 [package.optional-dependencies]

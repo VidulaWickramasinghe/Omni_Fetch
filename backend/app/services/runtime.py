@@ -9,6 +9,7 @@ from pathlib import Path
 
 import imageio_ffmpeg
 from yt_dlp.dependencies import curl_cffi, yt_dlp_ejs
+from yt_dlp.networking.impersonate import ImpersonateTarget
 
 from ..config import Settings
 
@@ -67,6 +68,14 @@ def impersonation_available() -> bool:
     """Whether yt-dlp can impersonate a browser for TLS-sensitive sources."""
 
     return curl_cffi is not None
+
+
+def browser_impersonation_options() -> dict[str, object]:
+    """Use the newest available Chrome profile for a bounded retry."""
+
+    if not impersonation_available():
+        return {}
+    return {"impersonate": ImpersonateTarget(client="chrome")}
 
 
 def ytdlp_runtime_options(settings: Settings) -> dict[str, object]:

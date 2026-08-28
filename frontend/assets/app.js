@@ -7,6 +7,22 @@
   const DIRECT_REQUEST_TIMEOUT_MS = 300_000;
   const DIRECT_STREAM_MEDIA_TYPE = "application/vnd.omnifetch.download";
 
+  const PLATFORM_DOMAINS = Object.freeze([
+    { domains: ["youtube.com", "youtu.be"], platform: "youtube" },
+    { domains: ["instagram.com"], platform: "instagram" },
+    { domains: ["tiktok.com"], platform: "tiktok" },
+    { domains: ["reddit.com", "redditmedia.com", "redd.it"], platform: "reddit" },
+    { domains: ["twitter.com", "x.com"], platform: "twitter" },
+    { domains: ["facebook.com", "fb.watch"], platform: "facebook" },
+    { domains: ["threads.net"], platform: "threads" },
+    { domains: ["tumblr.com"], platform: "tumblr" },
+    { domains: ["bsky.app", "bsky.dev"], platform: "bluesky" },
+    { domains: ["snapchat.com"], platform: "snapchat" },
+    { domains: ["linkedin.com", "lnkd.in"], platform: "linkedin" },
+    { domains: ["pinterest.com"], platform: "pinterest" },
+    { domains: ["twitch.tv"], platform: "twitch" },
+  ]);
+
   const UI_STATE = Object.freeze({
     IDLE: "idle",
     INSPECTING: "inspecting",
@@ -40,6 +56,8 @@
     inspectForm: document.querySelector("#inspect-form"),
     urlInput: document.querySelector("#url-input"),
     inputTool: document.querySelector("#input-tool"),
+    platformDetect: document.querySelector("#platform-detect"),
+    platformDetectLabel: document.querySelector("#platform-detect-label"),
     inspectButton: document.querySelector("#inspect-button"),
     accessNote: document.querySelector("#access-note"),
     authOption: document.querySelector("#auth-option"),
@@ -169,11 +187,11 @@
 
     elements.urlInput.disabled = workflowLocked;
     elements.inputTool.disabled = workflowLocked;
+    elements.platformDetect.disabled = workflowLocked || inspectionVisible;
     elements.inspectButton.disabled = workflowLocked || inspectionVisible;
     elements.authToggle.disabled = workflowLocked || inspectionVisible;
     elements.inspectForm.setAttribute("aria-busy", String(inspectionVisible));
     elements.inspectButton.classList.toggle("is-busy", inspectionVisible);
-    elements.inspectButton.querySelector(".button__label").textContent = inspectionVisible ? "Inspecting…" : "Inspect URL";
 
     const creating = model.ui === UI_STATE.CREATING;
     elements.downloadButton.disabled = creating;
@@ -214,6 +232,40 @@
     const hasValue = elements.urlInput.value.trim().length > 0;
     elements.inputTool.textContent = hasValue ? "Clear" : "Paste";
     elements.inputTool.setAttribute("aria-label", hasValue ? "Clear media URL" : "Paste media URL from clipboard");
+    updatePlatformDetection();
+  }
+
+  function detectPlatformFromUrl(value) {
+    let hostname;
+    try {
+      hostname = new URL(String(value || "").trim()).hostname.toLowerCase().replace(/\.$/, "");
+    } catch {
+      return null;
+    }
+    for (const candidate of PLATFORM_DOMAINS) {
+      if (candidate.domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))) {
+        return candidate.platform;
+      }
+    }
+    return null;
+  }
+
+  function updatePlatformDetection() {
+    const platform = detectPlatformFromUrl(elements.urlInput.value);
+    const label = platform ? displayPlatform(platform) : null;
+    elements.platformDetect.hidden = !platform;
+    if (label) {
+      elements.platformDetectLabel.textContent = `${label} detected`;
+      elements.platformDetect.title = `Detected from this URL. Select it to paste a different platform URL.`;
+      elements.platformDetect.setAttribute("aria-label", `${label} detected. Select to change the media URL.`);
+    } else {
+      elements.platformDetectLabel.textContent = "Platform detected";
+      elements.platformDetect.removeAttribute("title");
+      elements.platformDetect.removeAttribute("aria-label");
+    }
+    elements.inspectButton.querySelector(".button__label").textContent = model.ui === UI_STATE.INSPECTING
+      ? label ? `Inspecting ${label}…` : "Inspecting…"
+      : label ? `Inspect ${label}` : "Inspect URL";
   }
 
   function parseSourceUrl() {
@@ -1244,8 +1296,14 @@
 
   function displayPlatform(value) {
     const key = String(value || "source").toLowerCase();
-    const known = { youtube: "YouTube", twitter: "X / Twitter", tiktok: "TikTok", instagram: "Instagram", facebook: "Facebook", reddit: "Reddit", bluesky: "Bluesky", twitch: "Twitch" };
+    const known = { youtube: "YouTube", twitter: "X / Twitter", tiktok: "TikTok", instagram: "Instagram", facebook: "Facebook", reddit: "Reddit", bluesky: "Bluesky", snapchat: "Snapchat", snapchatspotlight: "Snapchat", linkedin: "LinkedIn", tumblr: "Tumblr", threads: "Threads", pinterest: "Pinterest", twitch: "Twitch" };
     return known[key] || titleCase(key);
+  }
+
+  function changeDetectedPlatform() {
+    if (elements.platformDetect.disabled) return;
+    elements.urlInput.focus();
+    elements.urlInput.select();
   }
 
   function titleCase(value) {
@@ -1295,6 +1353,7 @@
   elements.inspectForm.addEventListener("submit", inspectSource);
   elements.urlInput.addEventListener("input", handleUrlInput);
   elements.inputTool.addEventListener("click", useInputTool);
+  elements.platformDetect.addEventListener("click", changeDetectedPlatform);
   elements.authToggle.addEventListener("change", handleAuthChange);
   elements.cancelInspection.addEventListener("click", cancelInspection);
   elements.downloadButton.addEventListener("click", startDownload);

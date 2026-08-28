@@ -89,9 +89,15 @@
             <input id="url-input" name="url" type="url" inputmode="url" enterkeyhint="go" autocomplete="url" autocapitalize="none" spellcheck="false" placeholder="https://example.com/video" aria-describedby="url-help url-error">
             <button id="input-tool" class="input-tool" type="button">Paste</button>
           </div>
-          <button id="inspect-button" class="button button--primary inspect-button" type="submit">
-            <span class="button__label">Inspect URL</span><span class="spinner" aria-hidden="true"></span>
-          </button>
+          <div class="url-actions">
+            <button id="platform-detect" class="platform-detect" type="button" hidden>
+              <span class="platform-detect__dot" aria-hidden="true"></span>
+              <span id="platform-detect-label">Platform detected</span>
+            </button>
+            <button id="inspect-button" class="button button--primary inspect-button" type="submit">
+              <span class="button__label">Inspect URL</span><span class="spinner" aria-hidden="true"></span>
+            </button>
+          </div>
         </div>
         <div id="auth-option" class="auth-option" hidden>
           <label class="auth-toggle" for="auth-toggle">

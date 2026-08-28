@@ -399,6 +399,55 @@ def test_transient_source_verification_gets_bounded_preflight_retries(
     assert TransientInspectionYDL.instances[1].options["impersonate"] == "chrome"
 
 
+class RedditFallbackYDL(SuccessfulYDL):
+    instances: ClassVar[list[RedditFallbackYDL]] = []
+
+    def extract_info(self, _url: str, *, download: bool) -> dict[str, Any]:
+        if not download:
+            raise downloader.yt_dlp.utils.DownloadError("Account authentication is required")
+        return self._finish_download()
+
+
+def test_reddit_api_block_uses_embed_preview_for_download(monkeypatch, settings_factory) -> None:
+    settings = settings_factory()
+    settings.prepare_runtime_dirs()
+    RedditFallbackYDL.instances = []
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", RedditFallbackYDL)
+    monkeypatch.setattr(downloader, "validate_url", lambda url, _settings: url)
+    monkeypatch.setattr(downloader.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        downloader,
+        "extract_reddit_embed_info",
+        lambda *_args, **_kwargs: {
+            "title": "Public Reddit video",
+            "duration": 12,
+            "extractor_key": "Reddit",
+            "_omnifetch_reddit_embed": True,
+            "formats": [
+                {
+                    "url": "https://packaged-media.redd.it/video.mp4",
+                    "vcodec": "h264",
+                    "acodec": "aac",
+                }
+            ],
+        },
+    )
+    events: list[dict[str, object]] = []
+
+    downloader.run_download_task(
+        job_id="7" * 32,
+        url="https://www.reddit.com/r/videos/comments/fixture/video/",
+        mode=FormatMode.ORIGINAL,
+        max_height=None,
+        settings=settings,
+        emit=events.append,
+    )
+
+    assert len(RedditFallbackYDL.instances) == 3
+    assert events[0]["platform"] == "reddit"
+    assert events[-1]["type"] == "complete"
+
+
 def test_authenticated_download_uses_temporary_cookie_copy_and_allows_private_media(
     monkeypatch, settings_factory, tmp_path: Path
 ) -> None:

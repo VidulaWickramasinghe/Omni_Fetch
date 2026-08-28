@@ -302,6 +302,48 @@ def test_transient_extraction_retry_enables_browser_impersonation(
     assert attempts[1].options["impersonate"] == "chrome"
 
 
+def test_reddit_api_block_uses_public_embed_fallback(settings_factory, monkeypatch) -> None:
+    attempts: list[FakeYDL] = []
+
+    def factory(options: dict[str, Any]) -> FakeYDL:
+        instance = FakeYDL(options, {})
+        instance.extract_info = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            yt_dlp.utils.DownloadError("Account authentication is required")
+        )
+        attempts.append(instance)
+        return instance
+
+    fallback = {
+        "extractor_key": "Reddit",
+        "title": "Public Reddit video",
+        "formats": [
+            {
+                "url": "https://packaged-media.redd.it/video.mp4",
+                "ext": "mp4",
+                "height": 720,
+                "vcodec": "h264",
+                "acodec": "aac",
+            }
+        ],
+    }
+    monkeypatch.setattr("app.services.extractor.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        "app.services.extractor.extract_reddit_embed_info",
+        lambda *_args, **_kwargs: fallback,
+    )
+
+    response = extract_metadata(
+        "https://www.reddit.com/r/videos/comments/fixture/video/",
+        settings_factory(),
+        ydl_factory=factory,
+    )
+
+    assert len(attempts) == 2
+    assert response.platform == "reddit"
+    assert response.supports_video is True
+    assert response.supports_audio is True
+
+
 def test_extract_metadata_uses_and_removes_private_cookie_copy(settings_factory, tmp_path) -> None:
     cookie_file = tmp_path / "session.cookies.txt"
     cookie_data = (

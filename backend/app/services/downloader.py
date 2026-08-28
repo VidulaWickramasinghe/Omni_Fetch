@@ -17,6 +17,7 @@ from ..models import FormatMode
 from .authentication import create_cookie_copy, remove_cookie_copy
 from .extractor import ensure_extractor_allowed, ensure_single_item
 from .platform import platform_from_info
+from .reddit import extract_reddit_embed_info
 from .runtime import (
     browser_impersonation_options,
     resolve_ffmpeg_location,
@@ -234,6 +235,14 @@ def run_download_task(
                     preview = ensure_single_item(ydl.extract_info(url, download=False))
                 break
             except yt_dlp.utils.DownloadError as exc:
+                if attempt >= 1 and "authentication is required" in str(exc).lower():
+                    preview = extract_reddit_embed_info(
+                        url,
+                        socket_timeout=settings.socket_timeout_seconds,
+                        options=inspect_options,
+                    )
+                    if preview is not None:
+                        break
                 if attempt == 2 or not _is_transient_download_error(exc):
                     raise
                 time.sleep(0.35 * (attempt + 1))
@@ -292,11 +301,17 @@ def run_download_task(
                     # Reuse the policy-checked result on the normal path. Social
                     # pages commonly rate-limit a second immediate page fetch,
                     # while their extracted media URLs are still valid.
-                    result = (
-                        ydl.process_ie_result(preview, download=True)
-                        if attempt == 0
-                        else ydl.extract_info(url, download=True)
-                    )
+                    if attempt == 0:
+                        result = ydl.process_ie_result(preview, download=True)
+                    elif preview.get("_omnifetch_reddit_embed"):
+                        refreshed = extract_reddit_embed_info(
+                            url,
+                            socket_timeout=settings.socket_timeout_seconds,
+                            options=inspect_options,
+                        )
+                        result = ydl.process_ie_result(refreshed or preview, download=True)
+                    else:
+                        result = ydl.extract_info(url, download=True)
                     info = ensure_single_item(result)
                 break
             except yt_dlp.utils.DownloadError as exc:
